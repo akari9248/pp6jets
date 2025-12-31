@@ -46,6 +46,7 @@ make gen
 ```
 cmsDriver.py Configuration/GenProduction/python/JME-RunIISummer20UL17GEN-00006-fragment.py --python_filename GEN.py --eventcontent RAWSIM --customise Configuration/DataProcessing/Utils.addMonitoring --datatier GEN --fileout file:gen.root --conditions 106X_mc2017_realistic_v6 --beamspot Realistic25ns13TeVEarly2017Collision --step GEN --geometry DB:Extended --era Run2_2017 --mc -n ${eventsnum} --filein file:MCDBtoEDM_NONE.root
 ```
+在放完fragment之后需要编译：`scram b - j 8`。
 然后进入`miniaod`文件夹，在提交condor之前有几个注意点：
 1. 记得把`fullsim.sh`中home路径改成你自己的，并且安装下面的那些CMSSW
 2. 运行`voms-proxy-init -voms cms -rfc -out x509up `
