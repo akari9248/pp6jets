@@ -46,9 +46,10 @@ make gen
 cmsDriver.py Configuration/GenProduction/python/JME-RunIISummer20UL17GEN-00006-fragment.py --python_filename GEN.py --eventcontent RAWSIM --customise Configuration/DataProcessing/Utils.addMonitoring --datatier GEN --fileout file:gen.root --conditions 106X_mc2017_realistic_v6 --beamspot Realistic25ns13TeVEarly2017Collision --step GEN --geometry DB:Extended --era Run2_2017 --mc -n ${eventsnum} --filein file:MCDBtoEDM_NONE.root
 ```
 然后进入`miniaod`文件夹，在提交condor之前有几个注意点：
-1. 运行`voms-proxy-init -voms cms -rfc -out x509up `
-2. 修改`condor.jdl`中的`output_destination`，这是文件输出路径
-3. 修改`fullsim.sh`中
+1. 记得把`fullsim.sh`中home路径改成你自己的，并且安装下面的那些CMSSW
+2. 运行`voms-proxy-init -voms cms -rfc -out x509up `
+3. 修改`condor.jdl`中的`output_destination`，这是文件输出路径
+4. 修改`fullsim.sh`中
 ```
 cmsDriver.py MCDBtoEDM --conditions 106X_mc2017_realistic_v6 -s NONE --eventcontent RAWSIM --datatier GEN --filein file:/eos/cms/store/group/phys_smp/ec/shuangyu/pp6j_15GeV/Part1/chunk${1}.lhe -n ${eventsnum}
 ```
