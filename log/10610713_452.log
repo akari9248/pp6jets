@@ -1,0 +1,53 @@
+000 (10610713.452.000) 12/16 02:21:39 Job submitted from host: <188.185.71.83:9618?addrs=188.185.71.83-9618+[2001-1458-d00-7--100-34d]-9618&alias=bigbird18.cern.ch&noUDP&sock=schedd_5052_d48c>
+...
+040 (10610713.452.000) 12/16 03:10:12 Started transferring input files
+	Transferring to host: <188.185.212.234:9618?addrs=188.185.212.234-9618+[2001-1458-303-19--100-66]-9618&alias=b9p26p5047.cern.ch&noUDP&sock=slot1_37_7264_e520_90165>
+...
+040 (10610713.452.000) 12/16 03:10:13 Finished transferring input files
+...
+001 (10610713.452.000) 12/16 03:10:13 Job executing on host: <188.185.212.234:9618?addrs=188.185.212.234-9618+[2001-1458-303-19--100-66]-9618&alias=b9p26p5047.cern.ch&noUDP&sock=startd_6666_e667>
+	SlotName: slot1_37@b9p26p5047.cern.ch
+	CondorScratchDir = "/pool/condor/dir_4115298"
+	Cpus = 4
+	Disk = 10890
+	GPUs = 0
+	Memory = 12000
+...
+006 (10610713.452.000) 12/16 03:10:29 Image size of job updated: 39632
+	39  -  MemoryUsage of job (MB)
+	39632  -  ResidentSetSize of job (KB)
+...
+006 (10610713.452.000) 12/16 03:15:30 Image size of job updated: 39936
+	39  -  MemoryUsage of job (MB)
+	39672  -  ResidentSetSize of job (KB)
+...
+040 (10610713.452.000) 12/16 07:10:53 Started transferring output files
+...
+040 (10610713.452.000) 12/16 07:10:53 Finished transferring output files
+...
+021 (10610713.452.000) 12/16 07:10:53 Error from starter on slot1_37@b9p26p5047.cern.ch:
+	STARTER at 188.185.212.234 failed to send file(s) to <188.185.71.83:9618>: |Error: reading from file /pool/condor/dir_4115298/chunk452.lhe: (errno 2) No such file or directory; SHADOW failed to receive file(s) from <188.185.212.234:38365>
+	Code 13 Subcode 2
+...
+004 (10610713.452.000) 12/16 07:10:53 Job was evicted.
+	(0) CPU times
+		Usr 0 03:48:08, Sys 0 00:00:55  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	3856678  -  Run Bytes Sent By Job
+	7584148  -  Run Bytes Received By Job
+	Transfer output files failure at execution point slot1_37@b9p26p5047.cern.ch while sending files to access point bigbird18. Details: reading from file /pool/condor/dir_4115298/chunk452.lhe: (errno 2) No such file or directory
+	Partitionable Resources :    Usage  Request Allocated 
+	   Cpus                 :     0.94        4         4 
+	   Disk (KB)            : 32396        7500     10890 
+	   GPUs                 :                           0 
+	   Memory (MB)          :    39       12000     12000 
+	   TimeExecute (s)      : 14440                       
+	   TimeSlotBusy (s)     : 14443                       
+...
+012 (10610713.452.000) 12/16 07:10:53 Job was held.
+	Transfer output files failure at execution point slot1_37@b9p26p5047.cern.ch while sending files to access point bigbird18. Details: reading from file /pool/condor/dir_4115298/chunk452.lhe: (errno 2) No such file or directory
+	Code 12 Subcode 2
+...
+009 (10610713.452.000) 12/16 07:14:13 Job was aborted.
+	via condor_rm (by user shuangyu)
+...

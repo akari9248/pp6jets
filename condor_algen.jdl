@@ -1,0 +1,20 @@
+universe = vanilla
+executable = run_alpgen.sh
+getenv = True
+
+Should_Transfer_Files = Yes
+arguments = $(Process)
+Transfer_Input_Files = alpgen
+Transfer_Output_Files = chunk$(Process).lhe
+output_destination = root://eoscms.cern.ch//eos/cms/store/group/phys_smp/ec/shuangyu/pp6j_15GeV/Part25
+
+output = log/$(Cluster)_$(Process).out
+error = log/$(Cluster)_$(Process).err
+log = log/$(Cluster)_$(Process).log
+MY.SingularityImage = "/cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/el7:x86_64"
+
++MaxRuntime = 14400
++RequestMemory = 10240
+max_retries = 2
+requirements = Machine =!= LastRemoteHost
+queue 1000

@@ -1,0 +1,21 @@
+ln -sf ../alplib/pdfdat/ctq45/cteq4m.tbl cteq4m 
+ln -sf ../alplib/pdfdat/ctq45/cteq4l.tbl cteq4l 
+ln -sf ../alplib/pdfdat/ctq45/cteq4hj.tbl cteq4hj 
+ln -sf ../alplib/pdfdat/ctq45/cteq5hj.tbl cteq5hj 
+ln -sf ../alplib/pdfdat/ctq61/cteq6m.tbl
+ln -sf ../alplib/pdfdat/ctq61/cteq6l.tbl
+ln -sf ../alplib/pdfdat/ctq61/cteq6l1.tbl
+ln -sf ../alplib/pdfdat/mrst/cor01.dat cor01 
+ln -sf ../alplib/pdfdat/mrst/alf117.dat
+ln -sf ../alplib/pdfdat/mrst/alf119.dat
+ln -sf ../alplib/pdfdat/mrst/alf121.dat
+ln -sf ../alplib/pdfdat/mrst/j121.dat 
+ln -sf ../alplib/pdfdat/mrst/lo2002.dat
+ln -sf ../alplib/pdfdat/ctq61sys/ctq61.00.tbl 
+ln -sf ../alplib/pdfdat/ctq66/ctq66.00.pds 
+ln -sf ../alplib/pdfdat/ctq66/ctq66.45.pds 
+ln -sf ../alplib/pdfdat/ctq66/ctq66.46.pds 
+ln -sf ../alplib/pdfdat/mstw/mstw2008lo.00.dat 
+ln -sf ../alplib/pdfdat/mstw/mstw2008nlo.00.dat
+ln -sf ../alplib/pdfdat/mstw/mrstlostar.00.dat
+ln -sf ../alplib/pdfdat/mstw/mrstlostarstar.00.dat

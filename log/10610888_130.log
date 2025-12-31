@@ -1,0 +1,52 @@
+000 (10610888.130.000) 12/16 07:14:44 Job submitted from host: <188.185.71.83:9618?addrs=188.185.71.83-9618+[2001-1458-d00-7--100-34d]-9618&alias=bigbird18.cern.ch&noUDP&sock=schedd_5052_d48c>
+...
+040 (10610888.130.000) 12/16 08:51:30 Started transferring input files
+	Transferring to host: <188.185.215.158:9618?addrs=188.185.215.158-9618+[2001-1458-303-26--100-1a]-9618&alias=b9p18p8340.cern.ch&noUDP&sock=slot1_4_9250_3631_89>
+...
+040 (10610888.130.000) 12/16 08:51:30 Finished transferring input files
+...
+001 (10610888.130.000) 12/16 08:51:30 Job executing on host: <188.185.215.158:9618?addrs=188.185.215.158-9618+[2001-1458-303-26--100-1a]-9618&alias=b9p18p8340.cern.ch&noUDP&sock=startd_7961_298d>
+	SlotName: slot1_4@b9p18p8340.cern.ch
+	CondorScratchDir = "/pool/condor/dir_51752"
+	Cpus = 4
+	Disk = 11087
+	GPUs = 0
+	Memory = 12000
+...
+006 (10610888.130.000) 12/16 08:51:43 Image size of job updated: 38024
+	38  -  MemoryUsage of job (MB)
+	38024  -  ResidentSetSize of job (KB)
+...
+006 (10610888.130.000) 12/16 08:56:43 Image size of job updated: 38448
+	38  -  MemoryUsage of job (MB)
+	38024  -  ResidentSetSize of job (KB)
+...
+022 (10610888.130.000) 12/16 09:53:14 Job disconnected, attempting to reconnect
+    Socket between submit and execute hosts closed unexpectedly
+    Trying to reconnect to slot1_4@b9p18p8340.cern.ch <188.185.215.158:9618?addrs=188.185.215.158-9618+[2001-1458-303-26--100-1a]-9618&alias=b9p18p8340.cern.ch&noUDP&sock=startd_7961_298d>
+...
+024 (10610888.130.000) 12/16 11:23:14 Job reconnection failed
+    Job disconnected too long: JobLeaseDuration (5400 seconds) expired
+    Can not reconnect to slot1_4@b9p18p8340.cern.ch, rescheduling job
+...
+004 (10610888.130.000) 12/16 11:23:24 Job was evicted.
+	(0) CPU times
+		Usr 0 00:55:02, Sys 0 00:00:01  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	0  -  Run Bytes Sent By Job
+	7584148  -  Run Bytes Received By Job
+	Job disconnected too long: JobLeaseDuration (5400 seconds) expired
+	Partitionable Resources :    Usage  Request Allocated 
+	   Cpus                 :     1.00        4         4 
+	   Disk (KB)            : 32367        7500     11087 
+	   GPUs                 :                           0 
+	   Memory (MB)          :    38       12000     12000 
+...
+040 (10610888.130.000) 12/16 13:25:10 Started transferring input files
+	Transferring to host: <188.185.194.168:9618?addrs=188.185.194.168-9618+[2001-1458-303-21--100-a4]-9618&alias=b9p20p8660.cern.ch&noUDP&sock=slot1_18_9739_c1a5_82601>
+...
+040 (10610888.130.000) 12/16 13:25:10 Finished transferring input files
+...
+009 (10610888.130.000) 12/16 13:25:11 Job was aborted.
+	Job removed by SYSTEM_PERIODIC_REMOVE due to wall time exceeded allowed max.
+...
