@@ -11,6 +11,7 @@ git clone git@github.com:akari9248/pp6jets.git
 ## ALPGEN
 在进入到pp6jets文件夹之后，运行如下命令：
 ```
+cmsenv
 scram tool info lhapdf
 ```
 会得到类似于如下的输出：
