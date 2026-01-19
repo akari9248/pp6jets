@@ -2,17 +2,13 @@ import FWCore.ParameterSet.Config as cms
 from Configuration.Generator.Pythia8CommonSettings_cfi import *
 from Configuration.Generator.MCTunes2017.PythiaCP5Settings_cfi import *
 
-generator = cms.EDFilter("Pythia8ConcurrentGeneratorFilter",
+generator = cms.EDFilter("Pythia8HadronizerFilter",
     PythiaParameters = cms.PSet(
         parameterSets = cms.vstring(
             'pythia8CommonSettings', 
             'pythia8CP5Settings', 
             'pythia8PSweightsSettings', 
-            'processParameters',
             'JetMatchingParameters'
-        ),
-        processParameters = cms.vstring(
-            'HardQCD:all = on', 
         ),
         pythia8CP5Settings = cms.vstring(
             'Tune:pp 14', 
@@ -61,19 +57,19 @@ generator = cms.EDFilter("Pythia8ConcurrentGeneratorFilter",
         JetMatchingParameters = cms.vstring(
             'JetMatching:setMad = off',
             'JetMatching:scheme = 1',
-            'JetMatching:merge = on',  
+            'JetMatching:merge = off',  
             'JetMatching:jetAlgorithm = 2',
             'JetMatching:etaJetMax = 5.',
             'JetMatching:coneRadius = 0.4',
             'JetMatching:slowJetPower = -1',
-            'JetMatching:qCut = 20.',            # this is the actual merging scale
+            'JetMatching:qCut = 10.',            # this is the actual merging scale
             'JetMatching:nQmatch = 5',           # 4 corresponds to 4-flavour scheme (no matching of b-quarks), 5 for 5-flavour scheme
             'JetMatching:nJetMax = 6',           # number of partons in born matrix element for highest multiplicity
             'JetMatching:doShowerKt = off',      # off for MLM matching, turn on for shower-kT matching
         ),
     ),
     comEnergy = cms.double(13000.0),
-    crossSection = cms.untracked.double(2022100000.0),
+    crossSection = cms.untracked.double(11651800.000),
     filterEfficiency = cms.untracked.double(1.0),
     maxEventsToPrint = cms.untracked.int32(1),
     pythiaHepMCVerbosity = cms.untracked.bool(False),

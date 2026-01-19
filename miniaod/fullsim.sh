@@ -1,17 +1,17 @@
 #!/bin/bash
 # 94X_mc2017_realistic_v15
 GT="106X_mc2017_realistic_v9"
-home="/afs/cern.ch/user/z/zhye/"
-inputfile="/eos/cms/store/group/phys_smp/ec/zhye/pp6j_15GeV/Part1/chunk${1}.lhe"
+home="/afs/cern.ch/user/s/shuangyu/"
+inputfile="/eos/cms/store/group/phys_smp/ec/zhye/pp6j_15GeV/Part5/chunk${1}.lhe"
 
-eventsnum=$(grep -c '<event>' "${inputfile}")
-echo "Found ${eventsnum} events in ${inputfile}"
-
+# eventsnum=$(grep -c '<event>' "${inputfile}")
+# echo "Found ${eventsnum} events in ${inputfile}"
+eventsnum=10
 cd ${home}"CMSSW_10_6_28_patch1"
 source /cvmfs/cms.cern.ch/cmsset_default.sh
 eval `scramv1 runtime -sh`
 cd -
-cmsDriver.py MCDBtoEDM --conditions ${GT} -s NONE --eventcontent RAWSIM --datatier GEN --filein file:${inputfile} -n ${eventsnum}
+cmsDriver.py MCDBtoEDM --conditions ${GT} -s NONE --eventcontent LHE --datatier LHE --filein file:${inputfile} --fileout file:MCDBtoEDM_NONE.root -n ${eventsnum} --mc
 cmsDriver.py Configuration/GenProduction/python/JME-RunIISummer20UL17GEN-00006-fragment.py --python_filename GEN.py --eventcontent RAWSIM --customise Configuration/DataProcessing/Utils.addMonitoring --datatier GEN --fileout file:gen.root --conditions ${GT} --beamspot Realistic25ns13TeVEarly2017Collision --step GEN --geometry DB:Extended --era Run2_2017 --mc -n ${eventsnum} --filein file:MCDBtoEDM_NONE.root
 rm MCDBtoEDM_NONE.root
 
@@ -44,7 +44,7 @@ eval `scramv1 runtime -sh`
 cd -
 cmsDriver.py --python_filename MiniAOD.py --eventcontent MINIAODSIM --customise Configuration/DataProcessing/Utils.addMonitoring --datatier MINIAODSIM --fileout file:JME-RunIISummer20UL17MiniAODv2-${1}.root --conditions ${GT} --step PAT --procModifiers run2_miniAOD_UL --nThreads 4 --geometry DB:Extended --filein file:reco.root --era Run2_2017 --runUnscheduled --mc -n ${eventsnum}
 rm reco.root
-# rm MCDBtoEDM.py
+rm MCDBtoEDM*.py
 rm GEN.py
 rm SIM.py
 rm DIGI2RAW.py
