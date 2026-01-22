@@ -1,20 +1,32 @@
 # pp6jets
-## 安装说明
-这个git仓库要放在CMSSW下面，目前对于2017年的模拟，选择的是CMSSW_10_6_28_patch1:
-```
+
+A workflow for generating pp → 6 jets events using ALPGEN + PYTHIA within the CMS software framework.
+
+## Installation
+
+This repository must be placed inside a CMSSW release. For 2017 simulation, use `CMSSW_10_6_28_patch1`:
+
+```bash
 cmssw-el7
 cmsrel CMSSW_10_6_28_patch1
 cd CMSSW_10_6_28_patch1/src
 git clone git@github.com:akari9248/pp6jets.git
 ```
 
-## ALPGEN
-在进入到pp6jets文件夹之后，运行如下命令：
-```
+
+## ALPGEN Setup
+
+### 1. Configure LHAPDF Path
+
+After entering the `pp6jets` directory, run:
+
+```bash
 cmsenv
 scram tool info lhapdf
 ```
-会得到类似于如下的输出：
+
+You will see output similar to:
+
 ```
 Tool info as configured in location /afs/cern.ch/user/s/shuangyu/CMSSW_10_6_28_patch1
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -32,27 +44,99 @@ LHAPDF_DATA_PATH=/cvmfs/cms.cern.ch/slc7_amd64_gcc700/external/lhapdf/6.2.1-pafc
 ROOT_INCLUDE_PATH=/cvmfs/cms.cern.ch/slc7_amd64_gcc700/external/lhapdf/6.2.1-pafccj3/include
 PATH=/cvmfs/cms.cern.ch/slc7_amd64_gcc700/external/lhapdf/6.2.1-pafccj3/bin
 ```
-然后打开`alpgen/alplib/alpgen.mk`，找到`CONFIG_FILE_DIR=xxx`这一行，把它修改成你上面得到的`PATH`，随后运行：
-```
+
+### 2. Update Makefile
+
+Open `alpgen/alplib/alpgen.mk` and find the line `CONFIG_FILE_DIR=xxx`. Replace it with the `PATH` value from the output above.
+
+### 3. Compile ALPGEN
+
+```bash
 make cleanall
 make gen
 ```
-编译成功，可以运行`./Njetgen`测试一下。
-可执行文件为`run_alpgen.sh`，ALPGEN的输入在其中修改，具体在`cat > config_step1.txt << EOF` 和 `cat > config_step2.txt << EOF` 这两处。
-在提交condor任务的时候记得 Ctrl + A + D 退出singularity，运行`condor_submit condor_algen.jdl`即可。记得在每次提交任务的修改`output_destination`防止覆盖。
 
-# PYTHIA
-随后是LHE文件对接到PYTHIA，首先把`JME-RunIISummer20UL17GEN-00006-fragment.py`放在`CMSSW_10_6_28_patch1/src/Configuration/GenProduction/python/`下面（没有这个文件夹的话自己创建一个）。如果你有其他的配置文件，也记得放在这个文件夹下面，并且修改`miniaod`文件夹中fullsim.sh对应的
+After successful compilation, test by running `./Njetgen`.
+
+### 4. Configure and Run
+
+- The main executable is `run_alpgen.sh`
+- ALPGEN input parameters are defined in two sections:
+  - `cat > config_step1.txt << EOF`
+  - `cat > config_step2.txt << EOF`
+
+---
+
+## PYTHIA Integration
+
+### 1. Install the Fragment File
+
+Copy `JME-RunIISummer20UL17GEN-00006-fragment.py` to:
+
 ```
-cmsDriver.py Configuration/GenProduction/python/JME-RunIISummer20UL17GEN-00006-fragment.py --python_filename GEN.py --eventcontent RAWSIM --customise Configuration/DataProcessing/Utils.addMonitoring --datatier GEN --fileout file:gen.root --conditions 106X_mc2017_realistic_v6 --beamspot Realistic25ns13TeVEarly2017Collision --step GEN --geometry DB:Extended --era Run2_2017 --mc -n ${eventsnum} --filein file:MCDBtoEDM_NONE.root
+CMSSW_10_6_28_patch1/src/Configuration/GenProduction/python/
 ```
-在放完fragment之后需要编译：`scram b -j 8`。
-然后进入`miniaod`文件夹，在提交condor之前有几个注意点：
-1. 记得把`fullsim.sh`中home路径改成你自己的，并且安装下面的那些CMSSW
-2. 运行`voms-proxy-init -voms cms -rfc -out x509up `
-3. 修改`condor.jdl`中的`output_destination`，这是文件输出路径
-4. 修改`fullsim.sh`中
+
+> **Note:** Create this directory if it doesn't exist.
+
+If you have custom configuration files, place them in the same directory and update the corresponding path in `miniaod/fullsim.sh`:
+
+```bash
+cmsDriver.py Configuration/GenProduction/python/JME-RunIISummer20UL17GEN-00006-fragment.py \
+  --python_filename GEN.py \
+  --eventcontent RAWSIM \
+  --customise Configuration/DataProcessing/Utils.addMonitoring \
+  --datatier GEN \
+  --fileout file:gen.root \
+  --conditions 106X_mc2017_realistic_v6 \
+  --beamspot Realistic25ns13TeVEarly2017Collision \
+  --step GEN \
+  --geometry DB:Extended \
+  --era Run2_2017 \
+  --mc \
+  -n ${eventsnum} \
+  --filein file:MCDBtoEDM_NONE.root
 ```
-cmsDriver.py MCDBtoEDM --conditions 106X_mc2017_realistic_v6 -s NONE --eventcontent RAWSIM --datatier GEN --filein file:/eos/cms/store/group/phys_smp/ec/shuangyu/pp6j_15GeV/Part1/chunk${1}.lhe -n ${eventsnum}
+
+### 2. Compile CMSSW
+
+After placing the fragment file, compile:
+
+```bash
+scram b -j 8
 ```
-这一行命令，主要是`--filein`后面的参数，这是LHE文件的input，`/chunk${1}.lhe`不用管，前面记得改。
+
+---
+
+## Condor Job Submission
+
+### ALPGEN Jobs
+
+1. Exit the Singularity container using `Ctrl + A + D`
+2. Submit with: `condor_submit condor_algen.jdl`
+3. **Important:** Modify `output_destination` before each submission to avoid overwriting previous results
+
+### Full Simulation (MiniAOD) Jobs
+
+Navigate to the `miniaod` folder and complete the following steps before submission:
+
+1. **Update home path** in `fullsim.sh` to your own directory, and install the required CMSSW versions listed there
+
+2. **Generate VOMS proxy:**
+   ```bash
+   voms-proxy-init -voms cms -rfc -out x509up
+   ```
+
+3. **Set output path:** Modify `output_destination` in `condor.jdl`
+
+4. **Configure LHE input:** Update the `--filein` parameter in `fullsim.sh`:
+   ```bash
+   cmsDriver.py MCDBtoEDM \
+     --conditions 106X_mc2017_realistic_v6 \
+     -s NONE \
+     --eventcontent RAWSIM \
+     --datatier GEN \
+     --filein file:/eos/cms/store/group/phys_smp/ec/shuangyu/pp6j_15GeV/Part1/chunk${1}.lhe \
+     -n ${eventsnum}
+   ```
+   > **Note:** Update the path before `/chunk${1}.lhe` to point to your LHE file location. Keep the `/chunk${1}.lhe` suffix unchanged.
