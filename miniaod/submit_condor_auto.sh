@@ -21,29 +21,12 @@ QUEUE_NUM=${2:-1000}
 
 # 脚本所在目录
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-FULLSIM_SH="${SCRIPT_DIR}/fullsim.sh"
 CONDOR_JDL="${SCRIPT_DIR}/condor.jdl"
 
-# 配置
-INPUT_BASE="/eos/cms/store/group/phys_smp/ec/zhye/pp6j_15GeV"
-OUTPUT_BASE="root://eoscms.cern.ch//eos/cms/store/group/phys_smp/ec/zhye/pp6j_15GeV_MINIAOD"
-
-echo "[Part${PART_NUM}] 开始配置..."
-
-# 修改 fullsim.sh
-sed -i "s|inputfile=\"/eos/cms/store/group/phys_smp/ec/zhye/pp6j_15GeV/Part[0-9]*/chunk|inputfile=\"${INPUT_BASE}/Part${PART_NUM}/chunk|g" "${FULLSIM_SH}"
-
-# 修改 condor.jdl
-sed -i "s|output_destination = root://eoscms.cern.ch//eos/cms/store/group/phys_smp/ec/zhye/pp6j_15GeV_MINIAOD/Part[0-9]*|output_destination = ${OUTPUT_BASE}/Part${PART_NUM}|g" "${CONDOR_JDL}"
-sed -i "s|^queue [0-9]*|queue ${QUEUE_NUM}|g" "${CONDOR_JDL}"
-
-# 确保 log 目录存在
-mkdir -p "${SCRIPT_DIR}/log"
-
-# 提交任务
+# 提交任务 - 通过命令行参数传递变量，不再修改文件！
 cd "${SCRIPT_DIR}"
 echo "[Part${PART_NUM}] 提交任务 (队列: ${QUEUE_NUM})..."
-condor_submit condor.jdl
+condor_submit "${CONDOR_JDL}" PART_NUM="${PART_NUM}" QUEUE_NUM="${QUEUE_NUM}"
 
 echo "[Part${PART_NUM}] 完成！"
 

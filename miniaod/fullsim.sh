@@ -1,12 +1,15 @@
 #!/bin/bash
 # 94X_mc2017_realistic_v15
 GT="106X_mc2017_realistic_v9"
-home="/afs/cern.ch/user/s/shuangyu/"
-inputfile="/eos/cms/store/group/phys_smp/ec/zhye/pp6j_15GeV/Part5/chunk${1}.lhe"
+home="/afs/cern.ch/user/z/zhye/"
 
-# eventsnum=$(grep -c '<event>' "${inputfile}")
-# echo "Found ${eventsnum} events in ${inputfile}"
-eventsnum=10
+PART_NUM="${1}"
+CHUNK_NUM="${2}"
+inputfile="/eos/cms/store/group/phys_smp/ec/zhye/pp6j_20GeV/Part${PART_NUM}/chunk${CHUNK_NUM}.lhe"
+
+eventsnum=$(grep -c '<event>' "${inputfile}")
+echo "Found ${eventsnum} events in ${inputfile}"
+
 cd ${home}"CMSSW_10_6_28_patch1"
 source /cvmfs/cms.cern.ch/cmsset_default.sh
 eval `scramv1 runtime -sh`
@@ -42,7 +45,7 @@ cd ${home}"CMSSW_10_6_20"
 source /cvmfs/cms.cern.ch/cmsset_default.sh
 eval `scramv1 runtime -sh`
 cd -
-cmsDriver.py --python_filename MiniAOD.py --eventcontent MINIAODSIM --customise Configuration/DataProcessing/Utils.addMonitoring --datatier MINIAODSIM --fileout file:JME-RunIISummer20UL17MiniAODv2-${1}.root --conditions ${GT} --step PAT --procModifiers run2_miniAOD_UL --nThreads 4 --geometry DB:Extended --filein file:reco.root --era Run2_2017 --runUnscheduled --mc -n ${eventsnum}
+cmsDriver.py --python_filename MiniAOD.py --eventcontent MINIAODSIM --customise Configuration/DataProcessing/Utils.addMonitoring --datatier MINIAODSIM --fileout file:JME-RunIISummer20UL17MiniAODv2-${CHUNK_NUM}.root --conditions ${GT} --step PAT --procModifiers run2_miniAOD_UL --nThreads 4 --geometry DB:Extended --filein file:reco.root --era Run2_2017 --runUnscheduled --mc -n ${eventsnum}
 rm reco.root
 rm MCDBtoEDM*.py
 rm GEN.py
