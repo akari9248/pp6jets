@@ -6,7 +6,7 @@ Should_Transfer_Files = Yes
 arguments = $(Process)
 Transfer_Input_Files = alpgen
 Transfer_Output_Files = chunk$(Process).lhe
-output_destination = root://eoscms.cern.ch//eos/cms/store/group/phys_smp/ec/zhye/pp6j_20GeV/Part1
+output_destination = root://eoscms.cern.ch//eos/cms/store/group/phys_smp/ec/shuangyu/pp6j_20GeV_ioqpt2_qfac0p5/Part1
 
 output = log/$(Cluster)_$(Process).out
 error = log/$(Cluster)_$(Process).err

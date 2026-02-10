@@ -4,8 +4,8 @@ module common
   implicit none
   ! Model and process parameters
   type(physics_model) :: phys_model
-  real(kind=8),parameter :: alphaS_MZ=0.119d0,alphaEW=0.007546771114d0
-  real(kind=8),parameter :: sqrts=13600.d0
+  real(kind=8),parameter :: alphaS_MZ=0.130d0,alphaEW=0.007546771114d0
+  real(kind=8),parameter :: sqrts=13000.d0
   real(kind=8) :: alphaS
   ! scale choice:
   ! 0: ren/fac scale = M_Z
