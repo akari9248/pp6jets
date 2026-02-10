@@ -31,9 +31,10 @@ cat > config_step1.txt << EOF
 ih2 1
 ebeam 6500
 ndns 315200
-iqopt 1
+iqopt 2
+qfac 0.5
 njets 6
-ptjmin 15
+ptjmin 20
 etajmax 5
 drjmin 0.3
 ilhe 1
