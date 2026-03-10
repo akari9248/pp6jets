@@ -1,0 +1,21 @@
+universe = vanilla
+executable = AmpliCol/run_amplicol.sh
+getenv = True
+
+Should_Transfer_Files = Yes
+arguments = $(PART_NUM) $(Process)
+Transfer_Input_Files = AmpliCol
+Transfer_Output_Files = part$(PART_NUM)_chunk$(Process)_events.lhe.rwgt
+output_destination = root://eoscms.cern.ch//eos/cms/store/group/phys_smp/ec/zhye/Amplicol/pp6j_20GeV_SC2/Part$(PART_NUM)
+
+output = /afs/cern.ch/user/z/zhye/CMSSW_10_6_28_patch1/src/pp6jets/AmpliCol/log/$(Cluster)_$(Process).out
+error = /afs/cern.ch/user/z/zhye/CMSSW_10_6_28_patch1/src/pp6jets/AmpliCol/log/$(Cluster)_$(Process).err
+log = /dev/null
+
+x509userproxy = /afs/cern.ch/user/z/zhye/CMSSW_10_6_28_patch1/src/pp6jets/x509up
+
++MaxRuntime = 57600
++RequestMemory = 10240
+max_retries = 2
+requirements = Machine =!= LastRemoteHost && (OpSysAndVer =?= "AlmaLinux9")
+queue $(QUEUE_NUM)

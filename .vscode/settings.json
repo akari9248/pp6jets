@@ -1,0 +1,4 @@
+{
+    "cursor.general.disableHttp2": false,
+    "git.ignoreLimitWarning": true
+}

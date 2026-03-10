@@ -1,0 +1,12 @@
+          24 particles loaded
+         211 interactions loaded
+ Total number of currents, vertices and amplitudes before filter       11180       36057        5040
+ Total number of currents, vertices and amplitudes after filter       11180       36057        5040
+ Initialising colour matrix ...
+ A single row in the colour matrix has           1           3          65  different colour factors at LC, NLC and full colour, respectively
+ ... colour matrix initialised
+ Total number of currents, vertices and amplitudes before filter        9380       28092         720
+ Total number of currents, vertices and amplitudes after filter        3554       10131         720
+ Initialising colour matrix ...
+ A single row in the colour matrix has           1          13          74  different colour factors at LC, NLC and full colour, respectively
+ ... colour matrix initialised
