@@ -18,14 +18,15 @@ if [ ! -f "amplicol_generate" ] && [ -f "AmpliCol/amplicol_generate" ]; then
     cd AmpliCol
 fi
 
-if [ -z "$1" ] || [ -z "$2" ]; then
-    echo "Error: Please provide part number and process number"
-    echo "Usage: $0 <part_num> <process>"
+if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ]; then
+    echo "Error: Please provide part number, process number and jet multiplicity (4/5/6)"
+    echo "Usage: $0 <part_num> <process> <njet>"
     exit 1
 fi
 
 PART_NUM=$1
 PROCESS=$2
+NJET=$3
 NEVENTS=1000
 
 # Unique seed and tag across all parts and processes
@@ -33,34 +34,46 @@ SEED=$((PART_NUM * 10000 + PROCESS * 10 + RANDOM % 10))
 TAG="part${PART_NUM}_chunk${PROCESS}"
 
 echo "========================================"
-echo "  AmpliCol pp -> 6j Event Generation"
+echo "  AmpliCol pp -> nj Event Generation"
 echo "========================================"
 echo "Part:     ${PART_NUM}"
 echo "Process:  ${PROCESS}"
 echo "Events:   ${NEVENTS}"
+echo "Njets:    ${NJET}j"
 echo "Seed:     ${SEED}"
 echo "Tag:      ${TAG}"
 echo "Work dir: ${SCRIPT_DIR}"
 echo "========================================"
 
-# Step 1: Process generation (creates processes.txt, only once)
-if [ ! -f "processes.txt" ]; then
-    echo "Running process generation..."
-    python3 ./process_list.py 'p p > 6j'
-    if [ $? -ne 0 ]; then
-        echo "Error: process_list.py failed"
+# Step 1: Select pre-generated process file
+case "${NJET}" in
+    4|"4j")
+        PROCESS_FILE="processes_4j.txt"
+        ;;
+    5|"5j")
+        PROCESS_FILE="processes_5j.txt"
+        ;;
+    6|"6j")
+        PROCESS_FILE="processes_6j.txt"
+        ;;
+    *)
+        echo "Error: Unsupported jet multiplicity '${NJET}'. Supported values are 4, 5, 6."
         exit 1
-    fi
-    echo "processes.txt generated."
-else
-    echo "processes.txt already exists, skipping process generation."
+        ;;
+esac
+
+if [ ! -f "${PROCESS_FILE}" ]; then
+    echo "Error: Process file '${PROCESS_FILE}' not found. Please generate it beforehand."
+    exit 1
 fi
+
+echo "Using process file: ${PROCESS_FILE}"
 
 mkdir -p Outputs
 
 # Step 2: Generate leading-colour events
 echo "Running event generation (${TAG})..."
-./amplicol_generate --nevents=${NEVENTS} --seed=${SEED} --tag=${TAG} --process=processes.txt
+./amplicol_generate --nevents=${NEVENTS} --seed=${SEED} --tag=${TAG} --process=${PROCESS_FILE}
 
 LC_EVENT_FILE="Outputs/${TAG}_events.lhe"
 if [ ! -f "${LC_EVENT_FILE}" ]; then
