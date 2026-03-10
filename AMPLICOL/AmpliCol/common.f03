@@ -6,13 +6,16 @@ module common
   type(physics_model) :: phys_model
   real(kind=8),parameter :: alphaS_MZ=0.130d0,alphaEW=0.007546771114d0
   real(kind=8),parameter :: sqrts=13000.d0
+  real(kind=8),parameter :: qfac_scale=0.5d0
   real(kind=8) :: alphaS
   ! scale choice:
   ! 0: ren/fac scale = M_Z
   ! 1: ren/fac scale = H_T
   ! 2: ren/fac scale = H_T/2
-  ! 3: ren/fac scale = min(jet-pT)
-  ! 4: ren/fac scale = M(non-jet system)
+  ! 3: ren/fac scale = sqrt(s-hat)
+  ! 4: ren/fac scale = min(jet-pT)
+  ! 5: ren/fac scale = M(non-jet system)
+  ! 6: ren/fac scale = qfac_scale * sqrt(sum_jets(pt_jet^2))
   integer,parameter :: scale_choice=2
   logical,parameter :: use_lhapdf=.true. ! (if false, use internal NNPDF_2.3_nlo_qed)
   character(len=128),parameter :: lhapdfset='NNPDF31_lo_as_0130'

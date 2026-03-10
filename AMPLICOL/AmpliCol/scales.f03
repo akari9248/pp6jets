@@ -47,6 +47,18 @@ contains
           ptot(0:3)=ptot(0:3)+p(0:3,i)
        enddo
        scale=sqrt(dot(ptot,ptot))
+    elseif (choice.eq.6) then
+       ! Q = qfac_scale * sqrt(sum_jets(pt_jet^2)),
+       scale=0d0
+       do i=3,n
+          if (.not. phys_model%is_jet(ipdg(i))) cycle
+          scale=scale + pT(p(0,i))**2
+       enddo
+       if (scale.le.0d0) then
+          write (*,*) 'Found no jet. Scale choice not valid',choice
+          stop 1
+       endif
+       scale=qfac_scale*sqrt(scale)
     endif
     if (scale.le.1d0) then
        write (*,*) 'Found scale smaller than 1 GeV. Scale choice not valid',choice

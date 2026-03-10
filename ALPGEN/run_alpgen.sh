@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Initialize CMS environment
-home="${HOME%/}/
+home="${HOME%/}/"
 cd ${home}"CMSSW_10_6_28_patch1"
 source /cvmfs/cms.cern.ch/cmsset_default.sh
 eval `scramv1 runtime -sh`
@@ -32,7 +32,7 @@ ih2 1
 ebeam 6500
 ndns 315200
 iqopt 2
-qfac 0.5
+qfac 1
 njets 6
 ptjmin 20
 etajmax 5
