@@ -8,7 +8,7 @@ generator = cms.EDFilter("Pythia8HadronizerFilter",
             'pythia8CommonSettings', 
             'pythia8CP5Settings', 
             'pythia8PSweightsSettings', 
-            'JetMatchingParameters'
+            'ckkwlMergingParameters'
         ),
         pythia8CP5Settings = cms.vstring(
             'Tune:pp 14', 
@@ -54,24 +54,22 @@ generator = cms.EDFilter("Pythia8HadronizerFilter",
             'UncertaintyBands:FSRpTmin2Fac = 20', 
             'UncertaintyBands:ISRpTmin2Fac = 1'
         ),
-        JetMatchingParameters = cms.vstring(
-            'JetMatching:setMad = off',
-            'JetMatching:scheme = 2',
-            'JetMatching:merge = on',
-            'JetMatching:jetAlgorithm = 2',
-            'JetMatching:slowJetPower = -1',
-            'JetMatching:etaJetMax = 5.',
-            'JetMatching:coneRadius = 0.4',
-            'JetMatching:eTjetMin = 24.0',
-            'JetMatching:nQmatch = 5',
-            'JetMatching:exclusive = 2',
-            'JetMatching:nJet = 6',
-            'JetMatching:nJetMax = 6',
-            'JetMatching:doShowerKt = off',
+        ckkwlMergingParameters = cms.vstring(
+            'Merging:doKTMerging = on',
+            'Merging:ktType = 1',
+            'Merging:Dparameter = 0.4',
+            'Merging:nQuarksMerge = 5',
+            'Merging:nJetMax = 4',
+            'Merging:TMS = 25',
+            'Merging:Process = pp>jj',
+            # Keep CKKW-L Sudakov weight accessible via Info::mergingWeight()
+            # so CMSSW's HadronizerFilter can veto zero-weight events.
+            # Default is "on": weight folded into Info::weight(), mergingWeight() == 1.
+            'Merging:includeWeightInXsection = off',
         ),
     ),
     comEnergy = cms.double(13000.0),
-    crossSection = cms.untracked.double(0.876E+06),
+    crossSection = cms.untracked.double(0.254E+06), # AMPLICOL 25GeV
     filterEfficiency = cms.untracked.double(1.0),
     maxEventsToPrint = cms.untracked.int32(1),
     pythiaHepMCVerbosity = cms.untracked.bool(False),
