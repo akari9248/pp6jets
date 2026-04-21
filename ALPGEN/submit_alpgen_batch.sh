@@ -20,7 +20,6 @@ for PART in $(seq $START $END); do
     condor_submit ${JDL_TEMP}
     rm ${JDL_TEMP}
 
-    sleep 10
 done
 
 echo "All jobs submitted!"

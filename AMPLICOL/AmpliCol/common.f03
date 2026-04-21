@@ -6,10 +6,10 @@ module common
   type(physics_model) :: phys_model
   real(kind=8),parameter :: alphaS_MZ=0.130d0,alphaEW=0.007546771114d0
   real(kind=8),parameter :: sqrts=13000.d0
-  real(kind=8),parameter :: qfac_scale=0.5d0
+  real(kind=8),parameter :: qfac_scale=1d0
   real(kind=8) :: alphaS
   ! scale choice:
-  ! 0: ren/fac scale = M_Z
+  ! 0: ren/fac scale = qfac_scale * M_Z
   ! 1: ren/fac scale = H_T
   ! 2: ren/fac scale = H_T/2
   ! 3: ren/fac scale = sqrt(s-hat)

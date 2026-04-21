@@ -12,7 +12,7 @@ if [ -z "$1" ]; then
     echo "用法: $0 <Part编号> [队列数量]"
     echo "示例: $0 1       # 提交 Part1, 队列1000"
     echo "      $0 2 500   # 提交 Part2, 队列500"
-    echo "批量: for i in {1..5}; do $0 \$i; done"
+    echo "批量: for i in {1..5}; do ./submit_condor_auto.sh \$i; done"
     exit 1
 fi
 
@@ -22,6 +22,12 @@ QUEUE_NUM=${2:-1000}
 # 脚本所在目录
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONDOR_JDL="${SCRIPT_DIR}/condor.jdl"
+RUNTIME_CHECK_SCRIPT="${SCRIPT_DIR}/check_pythia8interface_el7.sh"
+
+if [[ "${SKIP_PYTHIA8_EL7_CHECK:-0}" != "1" ]]; then
+    echo "[Part${PART_NUM}] 在提交前检查 patched Pythia8Interface 是否能在 el7 runtime 加载..."
+    bash "${RUNTIME_CHECK_SCRIPT}"
+fi
 
 # 提交任务 - 通过命令行参数传递变量，不再修改文件！
 cd "${SCRIPT_DIR}"

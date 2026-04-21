@@ -13,7 +13,7 @@ contains
     integer :: i
     if (choice.eq.0) then
        ! z-mass
-       scale=phys_model%get_mass(23)
+       scale=qfac_scale*phys_model%get_mass(23)
     elseif (choice.eq.1) then
        ! H_T
        scale=0d0

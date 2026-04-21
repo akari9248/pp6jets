@@ -6,7 +6,7 @@ Should_Transfer_Files = Yes
 arguments = $(PART_NUM) $(Process) $(NJET)
 Transfer_Input_Files = AmpliCol
 Transfer_Output_Files = part$(PART_NUM)_chunk$(Process)_events.lhe.rwgt
-output_destination = root://eoscms.cern.ch//eos/cms/store/group/phys_smp/ec/zhye/Amplicol/pp4j_20GeV_SC2/Part$(PART_NUM)
+output_destination = root://eoscms.cern.ch//eos/cms/store/group/phys_smp/ec/zhye/Amplicol/pp$(NJET)j_20GeV_SC2/Part$(PART_NUM)
 
 output = /dev/null
 error = /dev/null

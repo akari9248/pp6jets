@@ -1,17 +1,56 @@
 #!/bin/bash
 # 94X_mc2017_realistic_v15
-GT="106X_mc2017_realistic_v9"
-home="${HOME%/}/"
+set -e
+case "$USER" in
+  zhye)
+    home="/afs/cern.ch/user/z/zhye/"
+    ;;
+  shuangyu)
+    home="/afs/cern.ch/user/s/shuangyu/"
+    ;;
+  *)
+    echo "Error: unknown USER '$USER', cannot set home path"
+    exit 1
+    ;;
+esac
 
+FRAG_SRC=$home"CMSSW_10_6_28_patch1/src/pp6jets/AMPLICOL/miniaod_AmpliCol/JME-RunIISummer20UL17GEN-00006-fragment.py"
+FRAG_LINK=$home"CMSSW_10_6_28_patch1/src/Configuration/GenProduction/python/JME-RunIISummer20UL17GEN-00006-fragment-AmpliCol.py"
+if [[ ! -f "$FRAG_SRC" ]]; then
+  echo "Error: fragment source not found: $FRAG_SRC"
+  exit 1
+fi
+FRAG_SRC_REALPATH=$(realpath "$FRAG_SRC")
+FRAG_LINK_REALPATH=""
+if [[ -e "$FRAG_LINK" || -L "$FRAG_LINK" ]]; then
+  FRAG_LINK_REALPATH=$(realpath "$FRAG_LINK" 2>/dev/null || true)
+fi
+if [[ "$FRAG_LINK_REALPATH" != "$FRAG_SRC_REALPATH" ]]; then
+  ln -sf "$FRAG_SRC" "$FRAG_LINK"
+fi
+
+GT="106X_mc2017_realistic_v9For2017H_v1"
 PART_NUM="${1}"
 CHUNK_NUM="${2}"
 inputfile="/eos/cms/store/group/phys_smp/ec/zhye/Amplicol/pp6j_20GeV_SC2/Part${PART_NUM}/part${PART_NUM}_chunk${CHUNK_NUM}_events.lhe.rwgt"
+DEBUG_MODE=0
+
+if [[ "$*" == *"--DEBUG"* ]]; then
+  DEBUG_MODE=1
+  timestamp=$(date +%Y%m%d_%H%M%S)
+  logfile="fullsim_${timestamp}.log"
+  exec > >(tee -a "${logfile}") 2>&1
+  echo "DEBUG mode enabled, logging to ${logfile}"
+fi
 
 
 eventsnum=$(grep -c '<event>' "${inputfile}")
 echo "Found ${eventsnum} events in ${inputfile}"
+if [[ "${DEBUG_MODE}" -eq 1 ]]; then
+  eventsnum=100
+fi
 
-# cmsDriver requires .lhe extension to use LHESource instead of PoolSource
+
 ln -sf "${inputfile}" input.lhe
 
 cd ${home}"CMSSW_10_6_28_patch1"

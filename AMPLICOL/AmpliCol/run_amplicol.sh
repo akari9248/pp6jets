@@ -47,6 +47,12 @@ echo "========================================"
 
 # Step 1: Select pre-generated process file
 case "${NJET}" in
+    2|"2j")
+        PROCESS_FILE="processes_2j.txt"
+        ;;
+    3|"3j")
+        PROCESS_FILE="processes_3j.txt"
+        ;;
     4|"4j")
         PROCESS_FILE="processes_4j.txt"
         ;;
@@ -70,6 +76,7 @@ fi
 echo "Using process file: ${PROCESS_FILE}"
 
 mkdir -p Outputs
+make amplicol_generate
 
 # Step 2: Generate leading-colour events
 echo "Running event generation (${TAG})..."

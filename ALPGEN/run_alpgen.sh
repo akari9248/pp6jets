@@ -1,8 +1,19 @@
 #!/bin/bash
 
-# Initialize CMS environment
-home="${HOME%/}/"
-cd ${home}"CMSSW_10_6_28_patch1"
+case "$USER" in
+  zhye)
+    CMSSW_BASE="/afs/cern.ch/user/z/zhye/CMSSW_10_6_28_patch1"
+    ;;
+  shuangyu)
+    CMSSW_BASE="/afs/cern.ch/user/s/shuangyu/CMSSW_10_6_28_patch1"
+    ;;
+  *)
+    echo "Error: unknown USER '$USER', cannot set CMSSW path"
+    exit 1
+    ;;
+esac
+
+cd "$CMSSW_BASE" || { echo "Cannot cd to $CMSSW_BASE"; exit 1; }
 source /cvmfs/cms.cern.ch/cmsset_default.sh
 eval `scramv1 runtime -sh`
 cd -
@@ -31,10 +42,10 @@ cat > config_step1.txt << EOF
 ih2 1
 ebeam 6500
 ndns 315200
-iqopt 2
+iqopt 1
 qfac 1
 njets 6
-ptjmin 20
+ptjmin 25
 etajmax 5
 drjmin 0.3
 ilhe 1
