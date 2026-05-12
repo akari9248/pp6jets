@@ -1,15 +1,21 @@
 #!/bin/bash
 # 94X_mc2017_realistic_v15
 set -e
+case "$USER" in
+  zhye)
+    home="/afs/cern.ch/user/z/zhye/"
+    ;;
+  shuangyu)
+    home="/afs/cern.ch/user/s/shuangyu/"
+    ;;
+  *)
+    echo "Error: unknown USER '$USER', cannot set home path"
+    exit 1
+    ;;
+esac
 
-# Derive paths from script location to avoid USER-based hardcoding on condor nodes.
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
-PP6JETS_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd -P)"
-CMSSW_10_6_28_ROOT="$(cd "${PP6JETS_DIR}/../.." && pwd -P)"
-home="$(cd "${CMSSW_10_6_28_ROOT}/.." && pwd -P)/"
-
-FRAG_SRC="${SCRIPT_DIR}/JME-RunIISummer20UL17GEN-00006-fragment.py"
-FRAG_LINK="${CMSSW_10_6_28_ROOT}/src/Configuration/GenProduction/python/JME-RunIISummer20UL17GEN-00006-fragment-AmpliCol.py"
+FRAG_SRC=$home"CMSSW_10_6_28_patch1/src/pp6jets/AMPLICOL/miniaod_AmpliCol/JME-RunIISummer20UL17GEN-00006-fragment.py"
+FRAG_LINK=$home"CMSSW_10_6_28_patch1/src/Configuration/GenProduction/python/JME-RunIISummer20UL17GEN-00006-fragment-AmpliCol.py"
 if [[ ! -f "$FRAG_SRC" ]]; then
   echo "Error: fragment source not found: $FRAG_SRC"
   exit 1
@@ -38,6 +44,11 @@ if [[ "$*" == *"--DEBUG"* ]]; then
 fi
 
 
+if [[ ! -r "${inputfile}" ]]; then
+  echo "Error: input LHE file is not readable: ${inputfile}"
+  exit 2
+fi
+
 eventsnum=$(grep -c '<event>' "${inputfile}")
 echo "Found ${eventsnum} events in ${inputfile}"
 if [[ "${DEBUG_MODE}" -eq 1 ]]; then
@@ -45,13 +56,25 @@ if [[ "${DEBUG_MODE}" -eq 1 ]]; then
 fi
 
 
-ln -sf "${inputfile}" input.lhe
+cp "${inputfile}" input.lhe
+if [[ ! -s input.lhe ]]; then
+  echo "Error: local input.lhe missing or empty after copy"
+  pwd
+  ls -l
+  exit 2
+fi
 
 # Use 10_6_28 for LHE->GEN setup and fragment handling (UL-era GEN configs).
 cd ${home}"CMSSW_10_6_28_patch1"
 source /cvmfs/cms.cern.ch/cmsset_default.sh
 eval `scramv1 runtime -sh`
 cd -
+if [[ ! -r input.lhe ]]; then
+  echo "Error: input.lhe not readable before MCDBtoEDM step"
+  pwd
+  ls -l input.lhe || true
+  exit 2
+fi
 cmsDriver.py MCDBtoEDM --conditions ${GT} -s NONE --eventcontent LHE --datatier LHE --filein file:input.lhe --fileout file:MCDBtoEDM_NONE.root -n ${eventsnum} --mc
 cmsDriver.py Configuration/GenProduction/python/JME-RunIISummer20UL17GEN-00006-fragment-AmpliCol.py --python_filename GEN.py --eventcontent RAWSIM --customise Configuration/DataProcessing/Utils.addMonitoring --datatier GEN --fileout file:gen.root --conditions ${GT} --beamspot Realistic25ns13TeVEarly2017Collision --step GEN --geometry DB:Extended --era Run2_2017 --mc -n ${eventsnum} --filein file:MCDBtoEDM_NONE.root
 rm MCDBtoEDM_NONE.root

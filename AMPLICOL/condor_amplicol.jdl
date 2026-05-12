@@ -14,8 +14,8 @@ log = /dev/null
 
 x509userproxy = /afs/cern.ch/user/z/zhye/CMSSW_10_6_28_patch1/src/pp6jets/x509up
 
-+MaxRuntime = 57600
-+RequestMemory = 10240
++JobFlavour = "workday"
++RequestMemory = 5120
 max_retries = 2
 requirements = Machine =!= LastRemoteHost && (OpSysAndVer =?= "AlmaLinux9")
 queue $(QUEUE_NUM)

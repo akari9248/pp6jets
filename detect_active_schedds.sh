@@ -6,20 +6,14 @@ set -euo pipefail
 # Usage:
 #   ./detect_active_schedds.sh
 #   ./detect_active_schedds.sh bigbird13.cern.ch bigbird19.cern.ch
-#
-# Environment variables:
-#   NODE_PREFIX   default: bigbird
-#   NODE_START    default: 1
-#   NODE_END      default: 40
-#   NODE_SUFFIX   default: .cern.ch
-#   QUERY_TIMEOUT default: 8 (seconds per node)
 
 USER_NAME="${USER:-$(id -un)}"
 NODE_PREFIX="${NODE_PREFIX:-bigbird}"
 NODE_START="${NODE_START:-1}"
-NODE_END="${NODE_END:-40}"
+NODE_END="${NODE_END:-101}"
 NODE_SUFFIX="${NODE_SUFFIX:-.cern.ch}"
 QUERY_TIMEOUT="${QUERY_TIMEOUT:-8}"
+MAX_PARALLEL="${MAX_PARALLEL:-12}"
 
 build_default_nodes() {
   local i
@@ -28,48 +22,34 @@ build_default_nodes() {
   done
 }
 
-get_user_jobs_on_node() {
+query_node_once() {
   local node="$1"
   local out
 
   # Query this schedd directly; avoid changing global myschedd assignment.
   if ! out="$(timeout "${QUERY_TIMEOUT}" condor_q -name "${node}" "${USER_NAME}" 2>/dev/null)"; then
-    return 1
-  fi
-
-  # For `condor_q -name <schedd> <user>`, "Total for query" equals this user's jobs.
-  # Some environments omit "Total for <user>", so parse query first, then user as fallback.
-  awk -v user="${USER_NAME}" '
-    $1 == "Total" && $2 == "for" && $3 == "query:" {
-      gsub(/[^0-9]/, "", $4)
-      print $4
-      found=1
-      exit
-    }
-    $1 == "Total" && $2 == "for" && $3 == user ":" {
-      gsub(/[^0-9]/, "", $4)
-      print $4
-      found=1
-      exit
-    }
-    END {
-      if (!found) print 0
-    }
-  ' <<< "${out}"
-}
-
-print_node_rows() {
-  local node="$1"
-  local out
-
-  if ! out="$(timeout "${QUERY_TIMEOUT}" condor_q -name "${node}" "${USER_NAME}" 2>/dev/null)"; then
-    return 1
+    return 0
   fi
 
   awk -v user="${USER_NAME}" -v node="${node}" '
     BEGIN {
       printed=0
+      jobs=0
       owner_re = "^" user "[[:space:]]"
+    }
+    # For `condor_q -name <schedd> <user>`, "Total for query" equals this user jobs.
+    # Some environments omit "Total for <user>", so parse query first, then user as fallback.
+    $1 == "Total" && $2 == "for" && $3 == "query:" {
+      val=$4
+      gsub(/[^0-9]/, "", val)
+      if (val != "") jobs = val + 0
+      next
+    }
+    $1 == "Total" && $2 == "for" && $3 == user ":" {
+      val=$4
+      gsub(/[^0-9]/, "", val)
+      if (val != "") jobs = val + 0
+      next
     }
     /^OWNER[[:space:]]+/ {
       header=$0
@@ -83,12 +63,32 @@ print_node_rows() {
       }
       print
     }
+    END {
+      if (!printed && jobs > 0) {
+        print "[" node "]"
+        if (header != "") print header
+      }
+    }
   ' <<< "${out}"
+}
+
+run_one_node() {
+  local idx="$1"
+  local node="$2"
+  local out_dir="$3"
+  local out_file="${out_dir}/${idx}.out"
+
+  query_node_once "${node}" > "${out_file}" || true
 }
 
 main() {
   local -a nodes
-  local node jobs
+  local node
+  local out_dir
+  local -a pids
+  local i pid
+  local running=0
+  local found_any=0
 
   if (($# > 0)); then
     nodes=("$@")
@@ -96,11 +96,32 @@ main() {
     mapfile -t nodes < <(build_default_nodes)
   fi
 
-  local found_any=0
-  for node in "${nodes[@]}"; do
-    jobs="$(get_user_jobs_on_node "${node}" || true)"
-    if [[ -n "${jobs}" ]] && [[ "${jobs}" =~ ^[0-9]+$ ]] && ((jobs > 0)); then
-      print_node_rows "${node}" || true
+  out_dir="$(mktemp -d)"
+  trap '[[ -n "${out_dir:-}" ]] && rm -rf "${out_dir}"' EXIT
+
+  for i in "${!nodes[@]}"; do
+    node="${nodes[$i]}"
+    run_one_node "$i" "${node}" "${out_dir}" &
+    pid=$!
+    pids+=("${pid}")
+    ((running += 1))
+
+    if ((running >= MAX_PARALLEL)); then
+      wait -n || true
+      ((running -= 1))
+    fi
+  done
+
+  for pid in "${pids[@]}"; do
+    wait "${pid}" || true
+  done
+
+  for i in "${!nodes[@]}"; do
+    if [[ -s "${out_dir}/${i}.out" ]]; then
+      while IFS= read -r line; do
+        [[ -z "${line}" ]] && continue
+        echo "${line}"
+      done < "${out_dir}/${i}.out"
       echo
       found_any=1
     fi

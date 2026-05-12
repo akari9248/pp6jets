@@ -14,8 +14,8 @@ log = log/$(Cluster).log
 MY.SingularityImage = "/cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/el7:x86_64"
 
 x509userproxy = /afs/cern.ch/user/z/zhye/CMSSW_10_6_28_patch1/src/pp6jets/x509up
-+JobFlavour = "tomorrow"
-+RequestMemory = 10240
++JobFlavour = "workday"
++RequestMemory = 6000
 max_retries = 2
 requirements = Machine =!= LastRemoteHost
 queue $(QUEUE_NUM)

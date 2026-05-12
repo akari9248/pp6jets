@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DEFAULT_BASE_MINIAOD="/eos/cms/store/group/phys_smp/ec/zhye/pp6j_20GeV_MINIAOD"
-DEFAULT_BASE_LHE="/eos/cms/store/group/phys_smp/ec/zhye/pp6j_20GeV"
+DEFAULT_BASE_MINIAOD="/eos/cms/store/group/phys_smp/ec/zhye/ALPGEN/pp6j_25GeV_MINIAOD"
+DEFAULT_BASE_LHE="/eos/cms/store/group/phys_smp/ec/zhye/ALPGEN/pp6j_25GeV"
 
 usage() {
   echo "Usage:"
