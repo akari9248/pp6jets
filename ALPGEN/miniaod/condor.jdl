@@ -1,21 +1,34 @@
+# 用户运行 ./submit.sh；每个 part 固定 1000 个任务。
 universe = vanilla
-executable = fullsim.sh
-getenv = True
-
-Should_Transfer_Files = Yes
-arguments = $(PART_NUM) $(Process)
-Transfer_Input_Files = fullsim.sh, existing_PUfiles_RunIISummer20UL17.txt
-Transfer_Output_Files = JME-RunIISummer20UL17MiniAODv2-$(Process).root
-output_destination = root://eoscms.cern.ch//eos/cms/store/group/phys_smp/ec/zhye/ALPGEN/pp6j_25GeV_MINIAOD/Part$(PART_NUM)
-
-output = log/$(Cluster)_$(Process).out
-error = log/$(Cluster)_$(Process).err
-log = log/$(Cluster).log
-MY.SingularityImage = "/cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/el7:x86_64"
-
-x509userproxy = /afs/cern.ch/user/z/zhye/CMSSW_10_6_28_patch1/src/pp6jets/x509up
+executable = run_condor.sh
+getenv = False
+index_expression = ($(PART) - 1) * 1000 + $(Process)
+index = $INT(index_expression)
+job_expression = ($(PART) - 1) * 1000 + $(Process) + 1
+job_id = $INT(job_expression)
+lhe = $(LHE_BASE)$(index).lhe
+arguments = $(job_id) $(lhe) $(tune)
+should_transfer_files = YES
+when_to_transfer_output = ON_EXIT
+transfer_input_files = $(lhe), fullsim.sh, fill_aqcdup.py, ALPGEN6j_Run2026C_cfi.py, PU_Run2026C_cff.py, Run2026C_PU.root, minbias_files.txt
+transfer_output_files = MiniAOD_$(tune)_chunk$(index).root, fullsim_$(tune)_chunk$(index).tgz
+output_destination = $(OUTPUT_BASE)/MiniAOD_$(tune)_AQCDUP_v1/Part$(PART)
+MY.SingularityImage = "/cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/el8:x86_64"
+x509userproxy = $(PROXY)
++JobBatchName = "ALPGEN_Run2026C_MiniAOD_$(tune)_Part$(PART)"
 +JobFlavour = "workday"
-+RequestMemory = 6000
-max_retries = 2
-requirements = Machine =!= LastRemoteHost
-queue $(QUEUE_NUM)
+# CERN allocates roughly 3000 MB per CPU; local validation peaked near 3 GB.
+request_cpus = 2
+request_memory = 6000
+request_disk = 20971520
+on_exit_hold = (ExitBySignal == True) || (ExitCode != 0)
+periodic_release = (HoldReasonCode == 12 && HoldReasonSubCode == 256 && NumJobStarts < 5)
+# Only Process=0 keeps logs; all other jobs use /dev/null.
+log_choice = ifThenElse($(Process) == 0, 0, 1)
+out_paths = log/$(tune)_Part$(PART).out, /dev/null
+err_paths = log/$(tune)_Part$(PART).err, /dev/null
+log_paths = log/$(tune)_Part$(PART).log, /dev/null
+output = $CHOICE(log_choice, out_paths)
+error = $CHOICE(log_choice, err_paths)
+log = $CHOICE(log_choice, log_paths)
+queue 1000

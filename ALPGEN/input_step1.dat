@@ -1,0 +1,17 @@
+1
+"sixjets"
+0
+2000, 3
+50000
+ih2 1
+ebeam 6800
+ndns 315200
+iqopt 1
+qfac 1
+njets 6
+ptjmin 25
+etajmax 5
+drjmin 0.3
+ilhe 1
+iseed1 12345
+iseed2 67890

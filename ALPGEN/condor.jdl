@@ -1,0 +1,31 @@
+# 用户运行 ./submit.sh；每个 part 固定 1000 个任务。
+universe = vanilla
+executable = run_condor.sh
+getenv = False
+index_expression = ($(PART) - 1) * 1000 + $(Process)
+index = $INT(index_expression)
+arguments = $(index) $(ClusterId)
+should_transfer_files = YES
+when_to_transfer_output = ON_EXIT
+transfer_input_files = alpgen, input_step1.dat, input_step2.dat
+transfer_output_files = chunk$(index).lhe, chunk$(index)_logs.tgz
+output_destination = $(OUTPUT_BASE)/LHE/Part$(PART)
+MY.SingularityImage = "/cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/el7:x86_64"
+x509userproxy = $(PROXY)
++JobBatchName = "ALPGEN_Run2026C_LHE_Part$(PART)"
++MaxRuntime = 14400
+request_cpus = 1
+request_memory = 2048
+request_disk = 2097152
+max_retries = 2
+requirements = Machine =!= LastRemoteHost
+periodic_release = (HoldReasonCode == 12 && HoldReasonSubCode == 256 && NumJobStarts < 5)
+# Only Process=0 keeps logs; all other jobs use /dev/null.
+log_choice = ifThenElse($(Process) == 0, 0, 1)
+out_paths = log/Part$(PART).out, /dev/null
+err_paths = log/Part$(PART).err, /dev/null
+log_paths = log/Part$(PART).log, /dev/null
+output = $CHOICE(log_choice, out_paths)
+error = $CHOICE(log_choice, err_paths)
+log = $CHOICE(log_choice, log_paths)
+queue 1000

@@ -1,99 +1,131 @@
 #!/bin/bash
-# 94X_mc2017_realistic_v15
-set -e
-case "$USER" in
-  zhye)
-    home="/afs/cern.ch/user/z/zhye/"
-    ;;
-  shuangyu)
-    home="/afs/cern.ch/user/s/shuangyu/"
-    ;;
-  *)
-    echo "Error: unknown USER '$USER', cannot set home path"
-    exit 1
-    ;;
-esac
-
-FRAG_SRC=$home"CMSSW_10_6_28_patch1/src/pp6jets/ALPGEN/miniaod/JME-RunIISummer20UL17GEN-00006-fragment.py"
-FRAG_LINK=$home"CMSSW_10_6_28_patch1/src/Configuration/GenProduction/python/JME-RunIISummer20UL17GEN-00006-fragment.py"
-if [[ ! -f "$FRAG_SRC" ]]; then
-  echo "Error: fragment source not found: $FRAG_SRC"
-  exit 1
+# Usage: fullsim.sh input.lhe work_directory [events=10] [all|lhe|gensim|digihlt|reco|mini|configs] [job_id=0] [CP2|CP5=CP5]
+set -euo pipefail
+SCRIPT=$(realpath "${BASH_SOURCE[0]}")
+BASE=$(dirname "$SCRIPT")
+if (($# < 2)); then
+  echo "Usage: $0 input.lhe work_directory [events=10] [all|lhe|gensim|digihlt|reco|mini|configs] [job_id=0] [CP2|CP5=CP5]" >&2
+  exit 2
 fi
-FRAG_SRC_REALPATH=$(realpath "$FRAG_SRC")
-FRAG_LINK_REALPATH=""
-if [[ -e "$FRAG_LINK" || -L "$FRAG_LINK" ]]; then
-  FRAG_LINK_REALPATH=$(realpath "$FRAG_LINK" 2>/dev/null || true)
+INPUT=$(realpath "$1")
+WORK=$(realpath -m "$2")
+EVENTS=${3:-10}
+STAGE=${4:-all}
+JOB_ID=${5:-0}
+TUNE=${6:-CP5}
+[[ "$TUNE" == CP2 || "$TUNE" == CP5 ]] || { echo "Tune must be CP2 or CP5" >&2; exit 2; }
+[[ "$EVENTS" == -1 || "$EVENTS" =~ ^[1-9][0-9]*$ ]] || { echo "events must be positive or -1 (all)" >&2; exit 2; }
+[[ "$JOB_ID" =~ ^[0-9]+$ ]] && ((JOB_ID < 80000)) || { echo "job_id must be 0..79999" >&2; exit 2; }
+case "$STAGE" in all|lhe|gensim|digihlt|reco|mini|configs) ;; *) echo "Unknown stage: $STAGE" >&2; exit 2;; esac
+
+if [[ ${ALPGEN_EL8:-0} != 1 ]]; then
+  PROXY=${X509_USER_PROXY:-/tmp/x509up_u$(id -u)}
+  exec apptainer exec --cleanenv --bind /afs,/eos,/cvmfs,/tmp \
+    /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/el8:x86_64 \
+    env ALPGEN_EL8=1 X509_USER_PROXY="$PROXY" \
+    X509_CERT_DIR=/cvmfs/grid.cern.ch/etc/grid-security/certificates /bin/bash "$SCRIPT" "$INPUT" "$WORK" "$EVENTS" "$STAGE" "$JOB_ID" "$TUNE"
 fi
-if [[ "$FRAG_LINK_REALPATH" != "$FRAG_SRC_REALPATH" ]]; then
-  ln -sf "$FRAG_SRC" "$FRAG_LINK"
+mkdir -p "$WORK"
+cd "$WORK"
+if [[ -f tune.txt && $(cat tune.txt) != "$TUNE" ]]; then
+  echo 'Use a separate work directory for each tune' >&2; exit 2
 fi
+printf '%s\n' "$TUNE" > tune.txt
+export ALPGEN_TUNE="$TUNE"
 
-GT="106X_mc2017_realistic_v9For2017H_v1"
-PART_NUM="${1}"
-CHUNK_NUM="${2}"
-inputfile="/eos/cms/store/group/phys_smp/ec/zhye/ALPGEN/pp6j_25GeV/Part${PART_NUM}/chunk${CHUNK_NUM}.lhe"
-DEBUG_MODE=0
+# Reject accidentally reused Run2 input. The LHE header holds the actual energy.
+python3 - "$INPUT" <<'PY'
+import sys, xml.etree.ElementTree as ET
+for _, node in ET.iterparse(sys.argv[1], events=('end',)):
+    if node.tag == 'init':
+        fields=node.text.split()
+        assert all(abs(float(x.replace('D','E'))-6800.) < .01 for x in fields[2:4]), 'LHE must have 6800 GeV per beam'
+        break
+else:
+    raise RuntimeError('Missing LHE init block')
+PY
 
-if [[ "$*" == *"--DEBUG"* ]]; then
-  DEBUG_MODE=1
-  timestamp=$(date +%Y%m%d_%H%M%S)
-  logfile="fullsim_${timestamp}.log"
-  exec > >(tee -a "${logfile}") 2>&1
-  echo "DEBUG mode enabled, logging to ${logfile}"
-fi
+GT=160X_mcRun3_2026_lowPU_v3
+GEN_RELEASE=/cvmfs/cms.cern.ch/el8_amd64_gcc13/cms/cmssw/CMSSW_16_0_8
+RECO_RELEASE=/cvmfs/cms.cern.ch/el8_amd64_gcc13/cms/cmssw/CMSSW_16_0_6
+PU_FILES=$BASE/minbias_files.txt
+export X509_CERT_DIR=/cvmfs/grid.cern.ch/etc/grid-security/certificates
+# Carry the fragment with the job; no private CMSSW area is needed on workers.
+mkdir -p localgen
+touch localgen/__init__.py
+cp "$BASE/ALPGEN6j_Run2026C_cfi.py" "$BASE/PU_Run2026C_cff.py" localgen/
+cp "$BASE/Run2026C_PU.root" "$WORK/"
 
+COMMON=(--conditions "$GT" --era Run3_2026 --geometry DB:Extended --mc -n "$EVENTS" --no_exec)
 
-eventsnum=$(grep -c '<event>' "${inputfile}")
-echo "Found ${eventsnum} events in ${inputfile}"
-if [[ "${DEBUG_MODE}" -eq 1 ]]; then
-  eventtestnum=100
-  eventsnum=$((eventsnum < eventtestnum ? eventsnum : eventtestnum))
-fi
+# Each stage has its own release, Python config, log and FrameworkJobReport.
+# All intermediate ROOT files are kept. Select one stage to rerun just that step.
+step() (
+  NAME=$1; RELEASE=$2; shift 2
+  [[ "$STAGE" == all || "$STAGE" == configs || "$STAGE" == "$NAME" ]] || exit 0
+  set +u
+  source /cvmfs/cms.cern.ch/cmsset_default.sh
+  export SCRAM_ARCH=el8_amd64_gcc13
+  cd "$RELEASE/src"
+  eval "$(scram runtime -sh)"
+  set -u
+  cd "$WORK"
+  export PYTHONPATH="$WORK:${PYTHONPATH:-}"
+  if [[ "$NAME" == lhe ]]; then
+    python3 "$BASE/fill_aqcdup.py" "$INPUT" "$WORK/input_aqcdup.lhe" \
+      --lhapdf-base "$(scram tool tag lhapdf LHAPDF_BASE)" > aqcdup.log 2>&1 || { tail -40 aqcdup.log; exit 1; }
+  fi
+  echo "=== $NAME : $CMSSW_VERSION ==="
+  cmsDriver.py "$@" "${COMMON[@]}" --python_filename "$NAME.py" > "${NAME}_config.log" 2>&1 || { tail -50 "${NAME}_config.log"; exit 1; }
+  python3 - "$NAME.py" <<'PY'
+import ast, sys
+ast.parse(open(sys.argv[1]).read())
+PY
+  # job_id=0 preserves the original local debugging seeds.
+  # A batch job has one unique lumi and a separate seed range for each stage.
+  if ((JOB_ID > 0)); then
+    python3 - "$NAME.py" "$JOB_ID" "$NAME" <<'PYSEED'
+import sys
+path, job, stage = sys.argv[1], int(sys.argv[2]), sys.argv[3]
+index = ['lhe', 'gensim', 'digihlt', 'reco', 'mini'].index(stage)
+seed = 100000 + job * 10000 + index * 1000
+with open(path, 'a') as out:
+    out.write("\n# Batch identity and reproducible random seeds.\n")
+    if stage == 'lhe':
+        out.write(f"process.source.firstLuminosityBlock = cms.untracked.uint32({job})\n")
+        out.write("process.source.numberEventsInLuminosityBlock = cms.untracked.uint32(1000000000)\n")
+    out.write("if hasattr(process, 'RandomNumberGeneratorService'):\n")
+    out.write("    from IOMC.RandomEngine.RandomServiceHelper import RandomNumberServiceHelper\n")
+    out.write("    _rng = RandomNumberServiceHelper(process.RandomNumberGeneratorService)\n")
+    out.write("    assert _rng.countSeeds() < 1000\n")
+    out.write(f"    _rng.insertSeeds(*range({seed}, {seed} + _rng.countSeeds()))\n")
+PYSEED
+  fi
+  if [[ "$STAGE" != configs ]]; then
+    cmsRun -j "$NAME.xml" "$NAME.py" > "$NAME.log" 2>&1 || { tail -50 "$NAME.log"; exit 1; }
+    echo "$NAME done; log: $WORK/$NAME.log"
+  fi
+)
 
-ln -sf "${inputfile}" input.lhe
+step lhe "$GEN_RELEASE" MCDBtoEDM -s NONE --eventcontent LHE --datatier LHE \
+  --filein "file:$WORK/input_aqcdup.lhe" --fileout file:lhe.root
 
-cd ${home}"CMSSW_10_6_28_patch1"
-source /cvmfs/cms.cern.ch/cmsset_default.sh
-eval `scramv1 runtime -sh`
-cd -
-cmsDriver.py MCDBtoEDM --conditions ${GT} -s NONE --eventcontent LHE --datatier LHE --filein file:${inputfile} --fileout file:MCDBtoEDM_NONE.root -n ${eventsnum} --mc
-cmsDriver.py Configuration/GenProduction/python/JME-RunIISummer20UL17GEN-00006-fragment.py --python_filename GEN.py --eventcontent RAWSIM --customise Configuration/DataProcessing/Utils.addMonitoring --datatier GEN --fileout file:gen.root --conditions ${GT} --beamspot Realistic25ns13TeVEarly2017Collision --step GEN --geometry DB:Extended --era Run2_2017 --mc -n ${eventsnum} --filein file:MCDBtoEDM_NONE.root
-rm MCDBtoEDM_NONE.root
+step gensim "$GEN_RELEASE" localgen/ALPGEN6j_Run2026C_cfi.py \
+  --step GEN,SIM --beamspot DBrealistic --eventcontent RAWSIM --datatier GEN-SIM --nThreads 1 \
+  --filein file:lhe.root --fileout file:sim.root
 
-cd ${home}"CMSSW_10_6_17_patch1"
-source /cvmfs/cms.cern.ch/cmsset_default.sh
-eval `scramv1 runtime -sh`
-cd -
-cmsDriver.py --python_filename SIM.py --eventcontent RAWSIM --customise Configuration/DataProcessing/Utils.addMonitoring --datatier GEN-SIM --fileout file:sim.root --conditions ${GT} --beamspot Realistic25ns13TeVEarly2017Collision --step SIM --nThreads 4 --geometry DB:Extended --filein file:gen.root --era Run2_2017 --runUnscheduled --mc -n ${eventsnum}
-rm gen.root
-cmsDriver.py --python_filename DIGI2RAW.py --eventcontent RAWSIM --customise Configuration/DataProcessing/Utils.addMonitoring --datatier GEN-SIM-DIGI --fileout file:digi.root --pileup_input filelist:existing_PUfiles_RunIISummer20UL17.txt --conditions 106X_mc2017_realistic_v9For2017H_v1 --customise_commands "process.mix.input.nbPileupEvents.probFunctionVariable = cms.vint32(0,1,2,3,4,5,6,7,8,9,10)\nprocess.mix.input.nbPileupEvents.probValue = cms.vdouble(0.00151109, 0.01743738, 0.4441798, 0.4967324, 0.0300071, 0.00585244, 0.001825343, 0.000985512, 0.000730211, 0.000545979, 0.000192059)" --step DIGI,L1,DIGI2RAW --nThreads 4 --geometry DB:Extended --filein file:sim.root --era Run2_2017 --runUnscheduled --mc -n ${eventsnum} --pileup 2017_25ns_UltraLegacy_PoissonOOTPU
-rm sim.root
+# The base scenario supplies 25 ns and BX -5..3; customise replaces mean=5 with the 0<=mu<10 histogram.
+step digihlt "$RECO_RELEASE" --step DIGI,L1,DIGI2RAW,HLT:2026v11 \
+  --pileup E7TeV_AVE_5_BX2808 --pileup_input "filelist:$PU_FILES" \
+  --customise localgen/PU_Run2026C_cff.customise \
+  --eventcontent RAWSIM --datatier GEN-SIM-RAW --nThreads 1 \
+  --filein file:sim.root --fileout file:hlt.root
 
-cd ${home}"CMSSW_9_4_14_UL_patch1"
-source /cvmfs/cms.cern.ch/cmsset_default.sh
-eval `scramv1 runtime -sh`
-cd -
-cmsDriver.py --python_filename HLT.py --eventcontent RAWSIM --customise Configuration/DataProcessing/Utils.addMonitoring --datatier GEN-SIM-RAW --fileout file:hlt.root --conditions 94X_mc2017_realistic_v15 --customise_commands "process.source.bypassVersionCheck = cms.untracked.bool(True)" --step HLT:2e34v40 --nThreads 4 --geometry DB:Extended --filein file:digi.root --era Run2_2017 --mc -n ${eventsnum}
-rm digi.root
+step reco "$RECO_RELEASE" --step RAW2DIGI,L1Reco,RECO,RECOSIM \
+  --eventcontent AODSIM --datatier AODSIM --nThreads 1 \
+  --filein file:hlt.root --fileout file:reco.root
 
-cd ${home}"CMSSW_10_6_17_patch1"
-source /cvmfs/cms.cern.ch/cmsset_default.sh
-eval `scramv1 runtime -sh`
-cd -
-cmsDriver.py --python_filename RECO.py --eventcontent AODSIM --customise Configuration/DataProcessing/Utils.addMonitoring --datatier AODSIM --fileout file:reco.root --conditions ${GT} --step RAW2DIGI,L1Reco,RECO,RECOSIM --nThreads 4 --geometry DB:Extended --filein file:hlt.root --era Run2_2017 --runUnscheduled --mc -n ${eventsnum}
-rm hlt.root
+step mini "$GEN_RELEASE" --step PAT --eventcontent MINIAODSIM --datatier MINIAODSIM \
+  --filein file:reco.root --fileout file:miniaod.root
 
-cd ${home}"CMSSW_10_6_20"
-source /cvmfs/cms.cern.ch/cmsset_default.sh
-eval `scramv1 runtime -sh`
-cd -
-cmsDriver.py --python_filename MiniAOD.py --eventcontent MINIAODSIM --customise Configuration/DataProcessing/Utils.addMonitoring --datatier MINIAODSIM --fileout file:JME-RunIISummer20UL17MiniAODv2-${CHUNK_NUM}.root --conditions ${GT} --step PAT --procModifiers run2_miniAOD_UL --nThreads 4 --geometry DB:Extended --filein file:reco.root --era Run2_2017 --runUnscheduled --mc -n ${eventsnum}
-rm reco.root
-rm input.lhe
-rm GEN.py
-rm SIM.py
-rm DIGI2RAW.py
-rm HLT.py
-rm RECO.py
-rm MiniAOD.py
+echo "Finished requested stage: $STAGE. Files and logs: $WORK"

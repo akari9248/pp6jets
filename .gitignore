@@ -1,4 +1,17 @@
 .vscode
 miniaod_*j
-**/x509up
+**/x509up*
 **/log
+**/__pycache__/
+
+ALPGEN/work/
+archive/migration/validation/
+
+# Credentials and generated runtime data
+*.pem
+*.key
+core
+core.*
+
+# Local migration evidence and historical runtime artifacts
+archive/

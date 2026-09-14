@@ -1,143 +1,51 @@
-# pp6jets
+# ALPGEN 六喷注 → Run2026C MiniAOD
 
-This repository contains two **parallel event-generator pipelines**:
+两个提交入口，每个 part 固定 1000 个任务。**只改脚本顶部的 FIRST_PART / LAST_PART，再运行脚本。** 助手不代交任务。
 
-- `ALPGEN` generator chain
-- `AMPLICOL` generator chain
-
-Both produce LHE events independently, and then each branch runs the **same MiniAOD production logic** (GEN/SIM/DIGI/HLT/RECO/MiniAOD with equivalent CMSSW-step structure).
-
-## Workflow Overview
-
-1. Generate LHE events with **either** ALPGEN or AMPLICOL.
-2. Run full simulation to MiniAOD for the selected branch:
-   - `ALPGEN/miniaod/fullsim.sh`
-   - `AMPLICOL/miniaod_AmpliCol/fullsim.sh`
-3. Submit Condor jobs with the matching `condor.jdl` in that branch.
-
-## Start From Scratch (lxplus)
-
-### 1) Initialize the environment
+在 CERN lxplus 上克隆到自己的 AFS 工作目录并生成自己的 proxy：
 
 ```bash
-source /cvmfs/cms.cern.ch/cmsset_default.sh
-cmssw-el7
-```
-
-### 2) Create all required CMSSW releases
-
-The MiniAOD scripts switch across these releases:
-
-- `CMSSW_10_6_28_patch1` (LHE->GEN setup + fragment handling)
-- `CMSSW_10_6_17_patch1` (SIM/DIGI2RAW/RECO)
-- `CMSSW_9_4_14_UL_patch1` (HLT menu in 94X)
-- `CMSSW_10_6_20` (final MiniAOD step)
-
-Create all of them:
-
-```bash
-cmsrel CMSSW_10_6_28_patch1
-cmsrel CMSSW_10_6_17_patch1
-cmsrel CMSSW_9_4_14_UL_patch1
-cmsrel CMSSW_10_6_20
-```
-
-### 3) Clone this repository
-
-```bash
-cd CMSSW_10_6_28_patch1/src
-git clone git@github.com:akari9248/pp6jets.git
+git clone --branch run2026c https://github.com/akari9248/pp6jets.git
 cd pp6jets
+voms-proxy-init -voms cms -rfc -valid 192:00
 ```
 
-## Branch A: ALPGEN
+不需要新建或编译 CMSSW；worker 使用 CVMFS 上的正式 release 和容器。ALPGEN 可执行文件随仓库提供。
 
-### A1) Build ALPGEN
-
-```bash
-cmsenv
-scram tool info lhapdf
-```
-
-Set `CONFIG_FILE_DIR=...` in `alpgen/alplib/alpgen.mk` to the LHAPDF `PATH` directory from the command output, then:
-
-```bash
-make cleanall
-make gen
-./Njetgen
-```
-
-### A2) Run MiniAOD chain for ALPGEN LHE
-
-Working directory: `ALPGEN/miniaod`
-
-Before submission:
-
-- set ALPGEN LHE input path in `ALPGEN/miniaod/fullsim.sh` (`inputfile=...`)
-- set EOS output path in `ALPGEN/miniaod/condor.jdl` (`output_destination`)
-- ensure `x509userproxy` points to a valid proxy file
-
-Submit with the batch helper script:
+当前 5000 份 LHE 已由 cluster 16823503 生产，对应 Part1–5，逐文件核验共 8,034,304 个事件。提交 CP2 和 CP5 MiniAOD：
 
 ```bash
 cd ALPGEN/miniaod
-./submit_condor_auto.sh <PART_NUM> [QUEUE_NUM]
+./submit.sh
 ```
 
-Examples:
+默认 Part1–5、CP2/CP5 各 5000 个任务。具体输入、输出见 [MiniAOD 说明](ALPGEN/miniaod/README.md)。不扫描输入数量，由你提交前检查。
+
+后续生成新 LHE：
 
 ```bash
-./submit_condor_auto.sh 1
-./submit_condor_auto.sh 2 500
-for i in {1..5}; do ./submit_condor_auto.sh $i; done
+cd ALPGEN
+./submit.sh
 ```
 
-## Branch B: AMPLICOL
+LHE 脚本默认 Part6–10，避免重复现有 Part1–5 的种子；输出 `LHE/Part<N>/chunk<全局编号>.lhe` 及统计日志。每任务固定 20M 次生成尝试、20k×1000 warmup；最终 unweighted 事件数需后续统计。现有 LHE 种子范围最多支持完整 Part30。脚本自动创建输出目录，继续生产使用未用过的 part；重复运行会重复提交。
 
-### B1) Produce AMPLICOL LHE
+物理设置保持：13.6 TeV，六 parton，pT>25、|eta|<5、ΔR>0.3，ME PDF NNPDF31_lo_as_0130；两版 shower 为 CP2/CP5、MPI=off、补真实 AQCDUP、0≤μ<10 PU。GEN/SIM 和 MiniAOD 用 CMSSW_16_0_8，DIGI/HLT/RECO 用 16_0_6。
 
-Use the scripts/config under `AMPLICOL` to produce your LHE samples.
+本地 debug：`ALPGEN/run_alpgen.sh work/test`；FullSim 的逐步调试入口保留。当前待办见 [TODO_Run2026C.md](TODO_Run2026C.md)。历史迁移资料、PU计算原始资料和验证日志保存在 zhye 本地的 `archive/`，不随 GitHub 发布；生产所需的 PU ROOT、fragment 和 MinBias 清单都随仓库提供。现有生产日志和 EOS 结果保留。
 
-### B2) Run MiniAOD chain for AMPLICOL LHE
+每个 part 只有第一个任务（Process=0）保存 Condor 的 log/out/err；其余999个任务均设为 `/dev/null`。第一个任务的调度 `.log` 保存在 AFS `log/`，`.out/.err` 随 `output_destination` 回传到该 part 的 EOS `log/`。CP2/CP5分别保留各自第一个任务。程序内部的物理/截面诊断归档仍随输出保存在 EOS。
 
-Working directory: `AMPLICOL/miniaod_AmpliCol`
+提交脚本通过 `id` 和 `$HOME` 自动识别账号，将自己的 `/tmp/x509up_u<UID>` 复制到自己的 AFS `private/x509up_u<UID>`（权限600），JDL 用 `x509userproxy` 传给 worker。bigbird 无法直接读取 lxplus 的 `/tmp`。
 
-Before submission:
+## zhye / mitang 协作
 
-- set AMPLICOL LHE input path in `AMPLICOL/miniaod_AmpliCol/fullsim.sh` (`inputfile=...`)
-- set EOS output path in `AMPLICOL/miniaod_AmpliCol/condor.jdl` (`output_destination`)
-- ensure `x509userproxy` points to a valid proxy file
+两人分别在自己的 AFS 克隆仓库、生成自己的 proxy、运行 `ALPGEN/miniaod/submit.sh`。只改脚本顶部 FIRST_PART / LAST_PART，无需修改 JDL 或替换代码中的用户名。
 
-Submit with the batch helper script:
+- 输入固定复用 zhye 的 Run2026C LHE；无需复制约10 GB的输入文件。
+- zhye 的输出路径保持原样。
+- mitang 的输出为 `.../pp6j_25GeV/mitang/MiniAOD_CP2_AQCDUP_v1/Part<N>/` 和对应 CP5 目录；目录位于 zhye 的 EOS 空间，已单独授权 mitang。
+- AFS 日志写入各自克隆目录；各自使用自己的 Condor 队列和 proxy。
+- 每次提交都会跑指定 part 的 CP2 和 CP5。两人需分配不同 part 或明确接手旧任务；相同 tune/part 的重复输出使用相同 LHE 和种子，不能作为独立样本合并。现有队列不会因拉取新代码而取消。
 
-```bash
-cd AMPLICOL/miniaod_AmpliCol
-./submit_condor_auto.sh <PART_NUM> [QUEUE_NUM]
-```
-
-Examples:
-
-```bash
-./submit_condor_auto.sh 1
-./submit_condor_auto.sh 2 500
-for i in {1..5}; do ./submit_condor_auto.sh $i; done
-```
-
-## VOMS Proxy
-
-Create/update proxy before Condor submission:
-
-```bash
-voms-proxy-init -voms cms -rfc -out x509up
-```
-
-## Useful Checks
-
-- detect schedd nodes where you currently have jobs:
-  ```bash
-  ./detect_active_schedds.sh
-  ```
-- check specific nodes only:
-  ```bash
-  ./detect_active_schedds.sh bigbird13.cern.ch bigbird19.cern.ch
-  ```
+默认 MiniAOD 的 Part6 以后仍读取 zhye 的 `LHE/Part<N>`。若使用 ALPGEN 入口由 mitang 生成新LHE，其输出在 `mitang/LHE/Part<N>`；需要使用这批新源时，应在 MiniAOD 提交脚本中明确修改 LHE 来源。LHE part 编号与种子需统一分配，不能按账号重新从头计数。
