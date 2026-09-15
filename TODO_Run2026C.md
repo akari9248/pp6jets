@@ -2,9 +2,9 @@
 
 核对日期：2026-09-14。目标：恰好 6 个 AK4 PUPPI jets，pT>30 GeV、|eta|<5；SPS MC 对照 data-mixing TPS。用户已指定 MPI=off、PU 只使用 0≤mu<10，任务由用户手动提交。proxy统一使用提交主机 `/tmp/x509up_u170369`，用 `voms-proxy-init -voms cms -rfc -valid 192:00` 生成，不放工作区；经用户同意，提交脚本复制到 AFS `private/x509up_u170369`，JDL自动传给worker；worker使用Condor传入的 `X509_USER_PROXY`。
 
-本文中的 `archive/` 路径指 zhye 本地历史证据，不随 GitHub 发布，生产无需这些文件。
+历史证据已校验后压缩归档到 EOS：`/eos/cms/store/group/phys_smp/ec/zhye/ALPGEN/Run2026C_13p6TeV/pp6j_25GeV/config/pp6jets_history_20260914_113441.tgz`。AFS 的 archive 目录已删除，生产不依赖历史资料。
 
-这是当前清单，替代 `archive/TODO_Run2026C.md` 中迁移初期的状态和旧路径。实现配置、跑通小样本、完成物理验证分别记录。
+这是当前清单，替代迁移初期的状态和旧路径。实现配置、跑通小样本、完成物理验证分别记录。
 
 **用户已授权两组各5000任务的CP2/CP5 MiniAOD生产，后续自行比较物理分布。两版AQCDUP补写和本地全链路已通过；按part展开的Condor dry-run通过（当前CP2/CP5各5×1000任务，及后续part接口），助手未提交。提交入口已简化为 submit.sh 顶部指定起止 part，每个 part 固定1000任务；无输入清单或预扫描，由用户检查源文件并运行脚本提交。**
 
@@ -30,7 +30,7 @@
 - [x] 实现每 job/stage 的 seeds 和 job lumi、保留中间配置/FJR/日志、失败归档；较早的非零 job_id 小样本已验证 lumi 贯通。
 - [x] 用户已提交 LHE cluster 16823503、5000 jobs。约 5M 是目标，尚非已核验的最终事件数。
 
-证据：`archive/validation_Run2026C/`（旧本地测试产物已按用户要求清理，保留简短验证记录）；配方：`archive/migration/reference/production_recipe.json`；PU：`archive/pu2026/`。
+验证记录、参考配方和 PU 计算资料均保存在上述 EOS 历史归档内。
 
 ## CP2/CP5 对照生产：当前执行状态
 
@@ -48,7 +48,7 @@
 - [ ] 比较ME scale/PDF、PS/merging变化，并保证生成相空间覆盖；不要用本地20事件测试推断正式效率或哪版更好。
 - [ ] 可用GEN级独立诊断定位差异；用户已决定先产两版MiniAOD，物理验证不再作为此轮配置工作的前置审批。
 
-详细依据见 `archive/PHYSICS_REVIEW_Run2026C.md`。现有原始LHE无需因补AQCDUP重跑。
+详细依据保存在上述 EOS 归档中的物理审查记录。现有原始LHE无需因补AQCDUP重跑。
 
 ## 批任务运行与生产规模
 

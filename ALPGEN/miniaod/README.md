@@ -24,7 +24,7 @@ EOS 父目录是 `/eos/cms/store/group/phys_smp/ec/zhye/ALPGEN/Run2026C_13p6TeV/
 
 proxy 使用当前账号的 `/tmp/x509up_u<UID>`；提交脚本自动复制到自己的 `$HOME/private/x509up_u<UID>`（权限600），JDL自动传到worker。worker使用Condor传入的 `X509_USER_PROXY`。MiniAOD 的现有种子布局支持完整 Part1–79，LHE 生成支持 Part1–30，其中 Part1–5 已保留给现有批次。
 
-本地逐步 debug 仍可使用：`./fullsim.sh input.lhe workdir 20 all 1 CP2`。全链路物理配置和已完成验证摘要见仓库 TODO；详细历史日志在 zhye 本地 `archive/`，不随 GitHub 发布。
+本地逐步 debug 仍可使用：`./fullsim.sh input.lhe workdir 20 all 1 CP2`。全链路物理配置和已完成验证摘要见仓库 TODO；详细历史资料已压缩归档到 EOS，生产不依赖它。
 
 每个 part 只有第一个任务（Process=0）保存 Condor 的 log/out/err；其余999个任务均设为 `/dev/null`。第一个任务的调度 `.log` 保存在 AFS `log/`，`.out/.err` 随 `output_destination` 回传到该 part 的 EOS `log/`。CP2/CP5分别保留各自第一个任务。程序内部的物理/截面诊断归档仍随输出保存在 EOS。
 

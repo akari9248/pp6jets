@@ -22,7 +22,7 @@ request_cpus = 2
 request_memory = 6000
 request_disk = 20971520
 on_exit_hold = (ExitBySignal == True) || (ExitCode != 0)
-periodic_release = (HoldReasonCode == 12 && HoldReasonSubCode == 256 && NumJobStarts < 5)
+periodic_release = (HoldReasonCode == 12 && HoldReasonSubCode == 256 && NumJobStarts < 3)
 # Only Process=0 keeps logs; all other jobs use /dev/null.
 log_choice = ifThenElse($(Process) == 0, 0, 1)
 out_paths = log/$(tune)_Part$(PART).out, /dev/null

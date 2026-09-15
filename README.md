@@ -32,7 +32,7 @@ LHE 脚本默认 Part6–10，避免重复现有 Part1–5 的种子；输出 `L
 
 物理设置保持：13.6 TeV，六 parton，pT>25、|eta|<5、ΔR>0.3，ME PDF NNPDF31_lo_as_0130；两版 shower 为 CP2/CP5、MPI=off、补真实 AQCDUP、0≤μ<10 PU。GEN/SIM 和 MiniAOD 用 CMSSW_16_0_8，DIGI/HLT/RECO 用 16_0_6。
 
-本地 debug：`ALPGEN/run_alpgen.sh work/test`；FullSim 的逐步调试入口保留。当前待办见 [TODO_Run2026C.md](TODO_Run2026C.md)。历史迁移资料、PU计算原始资料和验证日志保存在 zhye 本地的 `archive/`，不随 GitHub 发布；生产所需的 PU ROOT、fragment 和 MinBias 清单都随仓库提供。现有生产日志和 EOS 结果保留。
+本地 debug：`ALPGEN/run_alpgen.sh work/test`；FullSim 的逐步调试入口保留。当前待办见 [TODO_Run2026C.md](TODO_Run2026C.md)。历史资料已压缩归档到 EOS，AFS 的 archive 目录已清理；生产所需的 PU ROOT、fragment 和 MinBias 清单都随仓库提供。现有生产日志和 EOS 结果保留。
 
 每个 part 只有第一个任务（Process=0）保存 Condor 的 log/out/err；其余999个任务均设为 `/dev/null`。第一个任务的调度 `.log` 保存在 AFS `log/`，`.out/.err` 随 `output_destination` 回传到该 part 的 EOS `log/`。CP2/CP5分别保留各自第一个任务。程序内部的物理/截面诊断归档仍随输出保存在 EOS。
 
