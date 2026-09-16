@@ -71,10 +71,6 @@ step() (
   set -u
   cd "$WORK"
   export PYTHONPATH="$WORK:${PYTHONPATH:-}"
-  if [[ "$NAME" == lhe ]]; then
-    python3 "$BASE/fill_aqcdup.py" "$INPUT" "$WORK/input_aqcdup.lhe" \
-      --lhapdf-base "$(scram tool tag lhapdf LHAPDF_BASE)" > aqcdup.log 2>&1 || { tail -40 aqcdup.log; exit 1; }
-  fi
   echo "=== $NAME : $CMSSW_VERSION ==="
   cmsDriver.py "$@" "${COMMON[@]}" --python_filename "$NAME.py" > "${NAME}_config.log" 2>&1 || { tail -50 "${NAME}_config.log"; exit 1; }
   python3 - "$NAME.py" <<'PY'
@@ -108,7 +104,7 @@ PYSEED
 )
 
 step lhe "$GEN_RELEASE" MCDBtoEDM -s NONE --eventcontent LHE --datatier LHE \
-  --filein "file:$WORK/input_aqcdup.lhe" --fileout file:lhe.root
+  --filein "file:$INPUT" --fileout file:lhe.root
 
 step gensim "$GEN_RELEASE" localgen/ALPGEN6j_Run2026C_cfi.py \
   --step GEN,SIM --beamspot DBrealistic --eventcontent RAWSIM --datatier GEN-SIM --nThreads 1 \

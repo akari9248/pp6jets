@@ -7,7 +7,7 @@ JOB_ID=${1:?}; LHE_URL=${2:?}; TUNE=${3:?}
 INPUT=${LHE_URL##*/}
 STEM=chunk$((JOB_ID - 1))
 [[ "$TUNE" == CP2 || "$TUNE" == CP5 ]] || exit 2
-[[ "$INPUT" =~ ^chunk[0-9_]+\.lhe$ ]] || { echo "Invalid LHE filename: $INPUT" >&2; exit 2; }
+[[ "$INPUT" == "${STEM}.lhe" ]] || { echo "Expected ${STEM}.lhe, got: $INPUT" >&2; exit 2; }
 START=$PWD
 WORK=$START/work
 mkdir -p "$WORK"
@@ -16,7 +16,7 @@ archive_logs() {
   local status=$?
   trap - EXIT
   echo "$status" > "$WORK/exit_status.txt"
-  cp fullsim.sh fill_aqcdup.py ALPGEN6j_Run2026C_cfi.py PU_Run2026C_cff.py minbias_files.txt "$WORK/"
+  cp fullsim.sh ALPGEN6j_Run2026C_cfi.py PU_Run2026C_cff.py minbias_files.txt "$WORK/"
   # Preserve the PU configuration; only production ROOT/LHE intermediates are excluded.
   cp Run2026C_PU.root "$WORK/Run2026C_PU.root.input"
   tar --exclude='*.root' --exclude='*.lhe' -czf "fullsim_${TUNE}_${STEM}.tgz" -C "$WORK" .

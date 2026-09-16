@@ -20,12 +20,7 @@ if [[ "$SUBMITTER" != zhye ]]; then
 fi
 for tune in CP2 CP5; do
   for ((part=FIRST_PART; part<=LAST_PART; part++)); do
-    # 当前 5000 份旧命名输入直接对应 Part1–5，无需搬动文件。
-    if ((part <= 5)); then
-      lhe_base="root://eoscms.cern.ch/${BASE}/LHE_5M/chunk16823503_"
-    else
-      lhe_base="root://eoscms.cern.ch/${BASE}/LHE/Part${part}/chunk"
-    fi
+    lhe_base="root://eoscms.cern.ch/${BASE}/LHE/Part${part}/chunk"
     mkdir -p "${OUTPUT_BASE}/MiniAOD_${tune}_AQCDUP_v1/Part${part}"
     echo "提交 ${tune} Part${part}：1000 个任务"
     condor_submit condor.jdl PART="$part" TUNE="$tune" LHE_BASE="$lhe_base" PROXY="$PROXY" OUTPUT_BASE="root://eoscms.cern.ch/${OUTPUT_BASE}"

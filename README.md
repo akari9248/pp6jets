@@ -1,8 +1,8 @@
 # ALPGEN 六喷注 → Run2026C MiniAOD
 
-两个提交入口，每个 part 固定 1000 个任务。**只改脚本顶部的 FIRST_PART / LAST_PART，再运行脚本。** 助手不代交任务。
+## 提交
 
-在 CERN lxplus 上克隆到自己的 AFS 工作目录并生成自己的 proxy：
+在 lxplus 上使用自己的工作区和 proxy：
 
 ```bash
 git clone --branch run2026c https://github.com/akari9248/pp6jets.git
@@ -10,42 +10,60 @@ cd pp6jets
 voms-proxy-init -voms cms -rfc -valid 192:00
 ```
 
-不需要新建或编译 CMSSW；worker 使用 CVMFS 上的正式 release 和容器。ALPGEN 可执行文件随仓库提供。
+修改对应 `submit.sh` 顶部的 `FIRST_PART` / `LAST_PART`，再运行。每个 part 固定1000任务，由用户手动提交。
 
-当前 5000 份 LHE 已由 cluster 16823503 生产，对应 Part1–5，逐文件核验共 8,034,304 个事件。提交 CP2 和 CP5 MiniAOD：
+| 阶段 | 提交入口 | 当前默认 |
+|---|---|---|
+| ALPGEN → LHE | `cd ALPGEN && ./submit.sh` | Part6–10 |
+| LHE → MiniAOD | `cd ALPGEN/miniaod && ./submit.sh` | Part1–5，每个 part 同时跑 CP2/CP5 |
 
-```bash
-cd ALPGEN/miniaod
-./submit.sh
+现有输入为新批次 `LHE/Part1`–`Part5`，共5000份文件；实际事件数用统计脚本检查。提交入口不预扫描输入。续产使用未占用的 part；重复提交会重复使用输入和种子。LHE 支持 Part1–30，MiniAOD 支持 Part1–79。
+
+ALPGEN 每任务20M次生成尝试、20k×1000 warmup。MiniAOD 读完每份 LHE，执行 GEN/SIM→DIGI/L1/HLT→RECO→PAT，申请2 CPU、6000 MB内存、20 GiB磁盘和8小时。
+
+## 输入、输出和账号
+
+EOS 父目录：
+
+```text
+/eos/cms/store/group/phys_smp/ec/zhye/ALPGEN/Run2026C_13p6TeV/pp6j_25GeV
 ```
 
-默认 Part1–5、CP2/CP5 各 5000 个任务。具体输入、输出见 [MiniAOD 说明](ALPGEN/miniaod/README.md)。不扫描输入数量，由你提交前检查。
+- LHE：`LHE/Part<N>/chunk<编号>.lhe` 及 `chunk<编号>_logs.tgz`。
+- MiniAOD：`MiniAOD_CP2_AQCDUP_v1/Part<N>/` 和对应 CP5 目录；保留现有目录名。输出 ROOT 和 `fullsim_<TUNE>_chunk<编号>.tgz`。
+- 全局编号为 `(part-1)*1000 + Process`；同一输入的 CP2/CP5 使用相同种子映射。
+- MiniAOD 固定读取 zhye 的 LHE；其他账号的输出自动放在父目录的 `<账号>/` 下。各自使用自己的克隆、队列和 proxy。
+- 提交脚本把 `/tmp/x509up_u<UID>` 复制到 `$HOME/private/x509up_u<UID>`，由 Condor 传给 worker。
+- 每个 part 仅 Process=0 保存 Condor 日志；调度日志在本地 `log/`，out/err 在 EOS 对应 part 的 `log/`。每个任务的程序日志仍随输出归档。
 
-后续生成新 LHE：
+不同账号需协调 part 分配；相同 tune/part 的重复输出不能作为独立样本合并。其他账号生成的 LHE 位于其自身输出目录，使用时需相应修改 MiniAOD 的输入来源。
+
+## 当前配置
+
+| 项目 | 设置 |
+|---|---|
+| ME | 13.6 TeV，六 parton，pT>25 GeV、\|η\|<5、ΔR>0.3 |
+| PDF / 尺度 | NNPDF31_lo_as_0130；iqopt=1、qfac=1，μR=μF=√(ΣpT²/6) |
+| Shower | CP2 / CP5，MPI off，保留 nominal 和 PS weights |
+| Merging | CKKW-L，pp>jj，nJetMax=4，TMS=25 GeV，D=0.4，nQuarksMerge=5 |
+| LHE 接口 | 直接读取原始 LHE |
+| PU | 0≤μ<10 的 Run2026C profile；实际 Poisson 交互数不截断 |
+| 软件 | ALPGEN 使用 EL7；GEN/SIM、MiniAOD 用16_0_8，DIGI/HLT/RECO用16_0_6 |
+| Run3 配方 | Run3_2026，160X_mcRun3_2026_lowPU_v3，HLT:2026v11 |
+
+worker 使用 CVMFS release 和容器；ALPGEN 可执行文件随仓库提供，无需新建 CMSSW。`ALPGEN/alpgen/` 保留配套源码、编译文件和库数据。
+
+## 本地工具
 
 ```bash
-cd ALPGEN
-./submit.sh
+# ALPGEN 小样本
+./ALPGEN/run_alpgen.sh /tmp/alpgen_test
+# FullSim：输入、工作目录、事件数、阶段、job_id、tune
+./ALPGEN/miniaod/fullsim.sh input.lhe /tmp/fullsim_test 20 all 1 CP2
+# 统计 LHE；或传入具体 MiniAOD Part 目录统计 ROOT
+./count_events_part.sh all '*.lhe'
+# 查询有自己任务的 schedd
+./detect_active_schedds.sh
 ```
 
-LHE 脚本默认 Part6–10，避免重复现有 Part1–5 的种子；输出 `LHE/Part<N>/chunk<全局编号>.lhe` 及统计日志。每任务固定 20M 次生成尝试、20k×1000 warmup；最终 unweighted 事件数需后续统计。现有 LHE 种子范围最多支持完整 Part30。脚本自动创建输出目录，继续生产使用未用过的 part；重复运行会重复提交。
-
-物理设置保持：13.6 TeV，六 parton，pT>25、|eta|<5、ΔR>0.3，ME PDF NNPDF31_lo_as_0130；两版 shower 为 CP2/CP5、MPI=off、补真实 AQCDUP、0≤μ<10 PU。GEN/SIM 和 MiniAOD 用 CMSSW_16_0_8，DIGI/HLT/RECO 用 16_0_6。
-
-本地 debug：`ALPGEN/run_alpgen.sh work/test`；FullSim 的逐步调试入口保留。当前待办见 [TODO_Run2026C.md](TODO_Run2026C.md)。历史资料已压缩归档到 EOS，AFS 的 archive 目录已清理；生产所需的 PU ROOT、fragment 和 MinBias 清单都随仓库提供。现有生产日志和 EOS 结果保留。
-
-每个 part 只有第一个任务（Process=0）保存 Condor 的 log/out/err；其余999个任务均设为 `/dev/null`。第一个任务的调度 `.log` 保存在 AFS `log/`，`.out/.err` 随 `output_destination` 回传到该 part 的 EOS `log/`。CP2/CP5分别保留各自第一个任务。程序内部的物理/截面诊断归档仍随输出保存在 EOS。
-
-提交脚本通过 `id` 和 `$HOME` 自动识别账号，将自己的 `/tmp/x509up_u<UID>` 复制到自己的 AFS `private/x509up_u<UID>`（权限600），JDL 用 `x509userproxy` 传给 worker。bigbird 无法直接读取 lxplus 的 `/tmp`。
-
-## zhye / mitang 协作
-
-两人分别在自己的 AFS 克隆仓库、生成自己的 proxy、运行 `ALPGEN/miniaod/submit.sh`。只改脚本顶部 FIRST_PART / LAST_PART，无需修改 JDL 或替换代码中的用户名。
-
-- 输入固定复用 zhye 的 Run2026C LHE；无需复制约10 GB的输入文件。
-- zhye 的输出路径保持原样。
-- mitang 的输出为 `.../pp6j_25GeV/mitang/MiniAOD_CP2_AQCDUP_v1/Part<N>/` 和对应 CP5 目录；目录位于 zhye 的 EOS 空间，已单独授权 mitang。
-- AFS 日志写入各自克隆目录；各自使用自己的 Condor 队列和 proxy。
-- 每次提交都会跑指定 part 的 CP2 和 CP5。两人需分配不同 part 或明确接手旧任务；相同 tune/part 的重复输出使用相同 LHE 和种子，不能作为独立样本合并。现有队列不会因拉取新代码而取消。
-
-默认 MiniAOD 的 Part6 以后仍读取 zhye 的 `LHE/Part<N>`。若使用 ALPGEN 入口由 mitang 生成新LHE，其输出在 `mitang/LHE/Part<N>`；需要使用这批新源时，应在 MiniAOD 提交脚本中明确修改 LHE 来源。LHE part 编号与种子需统一分配，不能按账号重新从头计数。
+当前状态和待办见 [TODO_Run2026C.md](TODO_Run2026C.md)。工作区仅保留这两份说明文件。

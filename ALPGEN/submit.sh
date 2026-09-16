@@ -1,10 +1,14 @@
 #!/bin/bash
 set -euo pipefail
 
-FIRST_PART=1
-LAST_PART=5
+# Part1–5 已生成；续产使用未用过的 part。
+FIRST_PART=6
+LAST_PART=10
 
 cd "$(dirname "$(realpath "$0")")"
+((FIRST_PART >= 1 && LAST_PART >= FIRST_PART && LAST_PART <= 30)) || {
+  echo 'LHE part 范围应为 1..30（现有随机种子范围）。' >&2; exit 2;
+}
 SUBMITTER=$(id -un)
 PROXY="$HOME/private/x509up_u$(id -u)"
 install -m 600 "/tmp/x509up_u$(id -u)" "$PROXY"

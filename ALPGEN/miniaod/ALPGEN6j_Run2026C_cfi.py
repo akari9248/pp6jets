@@ -17,7 +17,7 @@ from Configuration.Generator.PSweightsPythia.PythiaPSweightsSettings_cfi import 
 # SPS sample: MPI remains off, as requested. ME PDF remains NNPDF31 LO as=0.130.
 # Keep the original pp>jj + four additional partons CKKW-L definition.
 # No external cross-section override; preserve runtime statistics for later normalization.
-# fullsim.sh fills AQCDUP from the original ME PDF before LHE-to-EDM conversion.
+# fullsim.sh passes the original LHE directly to LHE-to-EDM conversion.
 generator = cms.EDFilter("Pythia8HadronizerFilter",
     comEnergy=cms.double(13600.0),
     maxEventsToPrint=cms.untracked.int32(1),
