@@ -1,11 +1,15 @@
 #!/bin/bash
 # Run inside Condor's EL8 container. Inputs are transferred by Condor.
-# Arguments: job_id LHE_URL CP2_or_CP5 (set by condor.jdl)
+# Arguments: job_id LHE_URL CP2_or_CP5 filter_on_or_off (set by condor.jdl)
 set -euo pipefail
 JOB_ID=${1:?}; LHE_URL=${2:?}; TUNE=${3:?}
+JET_FILTER=${4:?}
+[[ "$JET_FILTER" == on || "$JET_FILTER" == off ]] || exit 2
 [[ "$JOB_ID" =~ ^[1-9][0-9]*$ ]] && ((JOB_ID < 80000)) || exit 2
 INPUT=${LHE_URL##*/}
-STEM=chunk$((JOB_ID - 1))
+PART=$(((JOB_ID - 1) / 1000 + 1))
+CHUNK=$(((JOB_ID - 1) % 1000))
+STEM=chunk${CHUNK}
 [[ "$TUNE" == CP2 || "$TUNE" == CP5 ]] || exit 2
 [[ "$INPUT" == "${STEM}.lhe" ]] || { echo "Expected ${STEM}.lhe, got: $INPUT" >&2; exit 2; }
 START=$PWD
@@ -16,7 +20,7 @@ archive_logs() {
   local status=$?
   trap - EXIT
   echo "$status" > "$WORK/exit_status.txt"
-  cp fullsim.sh ALPGEN6j_Run2026C_cfi.py PU_Run2026C_cff.py minbias_files.txt "$WORK/"
+  cp fullsim.sh ALPGEN6j_Run2026C_cfi.py CentralGenJetFilter_cff.py filter_summary.py PU_Run2026C_cff.py minbias_files.txt "$WORK/"
   # Preserve the PU configuration; only production ROOT/LHE intermediates are excluded.
   cp Run2026C_PU.root "$WORK/Run2026C_PU.root.input"
   tar --exclude='*.root' --exclude='*.lhe' -czf "fullsim_${TUNE}_${STEM}.tgz" -C "$WORK" .
@@ -27,8 +31,8 @@ trap archive_logs EXIT
 [[ -r "${X509_USER_PROXY:-}" ]] || { echo 'Missing CMS proxy for pileup input' >&2; exit 1; }
 export ALPGEN_EL8=1
 export X509_CERT_DIR=/cvmfs/grid.cern.ch/etc/grid-security/certificates
-printf 'Input=%s\nJobID=%s\nMaxLHEEvents=-1\nTune=%s\n' "$LHE_URL" "$JOB_ID" "$TUNE" > "$WORK/input.txt"
-/usr/bin/time -v -o "$WORK/resources.txt" bash ./fullsim.sh "$START/$INPUT" "$WORK" -1 all "$JOB_ID" "$TUNE"
+printf 'Input=%s\nPart=%s\nChunk=%s\nJobID=%s\nMaxLHEEvents=-1\nTune=%s\nJetFilter=%s\n' "$LHE_URL" "$PART" "$CHUNK" "$JOB_ID" "$TUNE" "$JET_FILTER" > "$WORK/input.txt"
+/usr/bin/time -v -o "$WORK/resources.txt" bash ./fullsim.sh "$START/$INPUT" "$WORK" -1 all "$JOB_ID" "$TUNE" "$JET_FILTER"
 python3 - "$WORK" <<'PY'
 import sys, pathlib, xml.etree.ElementTree as ET
 work=pathlib.Path(sys.argv[1])

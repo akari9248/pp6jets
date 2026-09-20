@@ -1,10 +1,10 @@
 #!/bin/bash
-# Usage: fullsim.sh input.lhe work_directory [events=10] [all|lhe|gensim|digihlt|reco|mini|configs] [job_id=0] [CP2|CP5=CP5]
+# Usage: fullsim.sh input.lhe work_directory [events=10] [all|lhe|gensim|digihlt|reco|mini|configs] [job_id=0] [CP2|CP5=CP5] [jet_filter=on|off]
 set -euo pipefail
 SCRIPT=$(realpath "${BASH_SOURCE[0]}")
 BASE=$(dirname "$SCRIPT")
 if (($# < 2)); then
-  echo "Usage: $0 input.lhe work_directory [events=10] [all|lhe|gensim|digihlt|reco|mini|configs] [job_id=0] [CP2|CP5=CP5]" >&2
+  echo "Usage: $0 input.lhe work_directory [events=10] [all|lhe|gensim|digihlt|reco|mini|configs] [job_id=0] [CP2|CP5=CP5] [jet_filter=on|off]" >&2
   exit 2
 fi
 INPUT=$(realpath "$1")
@@ -13,6 +13,8 @@ EVENTS=${3:-10}
 STAGE=${4:-all}
 JOB_ID=${5:-0}
 TUNE=${6:-CP5}
+JET_FILTER=${7:-on}
+[[ "$JET_FILTER" == on || "$JET_FILTER" == off ]] || { echo 'jet_filter must be on or off' >&2; exit 2; }
 [[ "$TUNE" == CP2 || "$TUNE" == CP5 ]] || { echo "Tune must be CP2 or CP5" >&2; exit 2; }
 [[ "$EVENTS" == -1 || "$EVENTS" =~ ^[1-9][0-9]*$ ]] || { echo "events must be positive or -1 (all)" >&2; exit 2; }
 [[ "$JOB_ID" =~ ^[0-9]+$ ]] && ((JOB_ID < 80000)) || { echo "job_id must be 0..79999" >&2; exit 2; }
@@ -23,7 +25,7 @@ if [[ ${ALPGEN_EL8:-0} != 1 ]]; then
   exec apptainer exec --cleanenv --bind /afs,/eos,/cvmfs,/tmp \
     /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/el8:x86_64 \
     env ALPGEN_EL8=1 X509_USER_PROXY="$PROXY" \
-    X509_CERT_DIR=/cvmfs/grid.cern.ch/etc/grid-security/certificates /bin/bash "$SCRIPT" "$INPUT" "$WORK" "$EVENTS" "$STAGE" "$JOB_ID" "$TUNE"
+    X509_CERT_DIR=/cvmfs/grid.cern.ch/etc/grid-security/certificates /bin/bash "$SCRIPT" "$INPUT" "$WORK" "$EVENTS" "$STAGE" "$JOB_ID" "$TUNE" "$JET_FILTER"
 fi
 mkdir -p "$WORK"
 cd "$WORK"
@@ -32,6 +34,14 @@ if [[ -f tune.txt && $(cat tune.txt) != "$TUNE" ]]; then
 fi
 printf '%s\n' "$TUNE" > tune.txt
 export ALPGEN_TUNE="$TUNE"
+if [[ -f jet_filter_mode.txt && $(cat jet_filter_mode.txt) != "$JET_FILTER" ]]; then
+  echo 'Use a separate work directory for each jet filter mode' >&2; exit 2
+fi
+if [[ ! -f jet_filter_mode.txt && -f gensim.py ]]; then
+  echo 'Use a new work directory for the central jet filter configuration' >&2; exit 2
+fi
+printf '%s\n' "$JET_FILTER" > jet_filter_mode.txt
+export ALPGEN_JET_FILTER="$JET_FILTER"
 
 # Reject accidentally reused Run2 input. The LHE header holds the actual energy.
 python3 - "$INPUT" <<'PY'
@@ -53,7 +63,7 @@ export X509_CERT_DIR=/cvmfs/grid.cern.ch/etc/grid-security/certificates
 # Carry the fragment with the job; no private CMSSW area is needed on workers.
 mkdir -p localgen
 touch localgen/__init__.py
-cp "$BASE/ALPGEN6j_Run2026C_cfi.py" "$BASE/PU_Run2026C_cff.py" localgen/
+cp "$BASE/ALPGEN6j_Run2026C_cfi.py" "$BASE/PU_Run2026C_cff.py" "$BASE/CentralGenJetFilter_cff.py" localgen/
 cp "$BASE/Run2026C_PU.root" "$WORK/"
 
 COMMON=(--conditions "$GT" --era Run3_2026 --geometry DB:Extended --mc -n "$EVENTS" --no_exec)
@@ -73,6 +83,14 @@ step() (
   export PYTHONPATH="$WORK:${PYTHONPATH:-}"
   echo "=== $NAME : $CMSSW_VERSION ==="
   cmsDriver.py "$@" "${COMMON[@]}" --python_filename "$NAME.py" > "${NAME}_config.log" 2>&1 || { tail -50 "${NAME}_config.log"; exit 1; }
+  if [[ "$NAME" != lhe ]]; then
+    cat >> "$NAME.py" <<'PYFILTER'
+
+# Retain prefilter decisions and lumi-level weighted counters through MiniAOD.
+from localgen.CentralGenJetFilter_cff import keep_filter_products
+process = keep_filter_products(process)
+PYFILTER
+  fi
   python3 - "$NAME.py" <<'PY'
 import ast, sys
 ast.parse(open(sys.argv[1]).read())
@@ -99,6 +117,9 @@ PYSEED
   fi
   if [[ "$STAGE" != configs ]]; then
     cmsRun -j "$NAME.xml" "$NAME.py" > "$NAME.log" 2>&1 || { tail -50 "$NAME.log"; exit 1; }
+    if [[ "$NAME" == gensim ]]; then
+      python3 "$BASE/filter_summary.py" sim.root central_jet_filter_summary.json --mode "$JET_FILTER" > central_jet_filter_summary.log 2>&1 || { cat central_jet_filter_summary.log; exit 1; }
+    fi
     echo "$NAME done; log: $WORK/$NAME.log"
   fi
 )
@@ -108,6 +129,7 @@ step lhe "$GEN_RELEASE" MCDBtoEDM -s NONE --eventcontent LHE --datatier LHE \
 
 step gensim "$GEN_RELEASE" localgen/ALPGEN6j_Run2026C_cfi.py \
   --step GEN,SIM --beamspot DBrealistic --eventcontent RAWSIM --datatier GEN-SIM --nThreads 1 \
+  --customise localgen/CentralGenJetFilter_cff.customise \
   --filein file:lhe.root --fileout file:sim.root
 
 # The base scenario supplies 25 ns and BX -5..3; customise replaces mean=5 with the 0<=mu<10 histogram.

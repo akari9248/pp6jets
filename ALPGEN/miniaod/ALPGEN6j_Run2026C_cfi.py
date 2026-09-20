@@ -41,4 +41,17 @@ generator = cms.EDFilter("Pythia8HadronizerFilter",
         parameterSets=cms.vstring('pythia8CommonSettings', tuneParameterSet, 'pythia8PSweightsSettings', 'processParameters'),
     ),
 )
-ProductionFilterSequence = cms.Sequence(generator)
+from localgen.CentralGenJetFilter_cff import (
+    centralJetGenParticles, centralJetInputs, centralJetAK4,
+    centralJetSelected, centralJetCount, centralJetPreparation,
+)
+
+jetFilterMode = os.environ.get('ALPGEN_JET_FILTER', 'on')
+if jetFilterMode not in ('on', 'off'):
+    raise ValueError('ALPGEN_JET_FILTER must be on or off')
+ProductionFilterSequence = cms.Sequence(generator + centralJetPreparation)
+if jetFilterMode == 'on':
+    ProductionFilterSequence += centralJetCount
+else:
+    # Keep the decision available for closure tests while allowing all events.
+    ProductionFilterSequence += cms.ignore(centralJetCount)
